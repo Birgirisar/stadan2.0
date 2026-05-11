@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Staðan",
+    "slug": "stadan",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "stadan",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "is.stadan.app"
+    },
+    "android": {
+      "package": "is.stadan.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0c0f"
+      }
+    },
+    "plugins": ["expo-router", "expo-system-ui"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

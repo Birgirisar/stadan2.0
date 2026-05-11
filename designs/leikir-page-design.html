@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Staðan — Íslenskur fótbolti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f4f4f1;
+    --bg-rgb: 244, 244, 241;
+    --surface: #ffffff;
+    --surface-rgb: 255, 255, 255;
+    --surface-elev: #ffffff;
+    --surface-sunken: #ebebe6;
+    --border: #e3e3dc;
+    --border-strong: #d4d4cb;
+    --text: #0e1014;
+    --text-secondary: #5a5d66;
+    --text-muted: #8a8d96;
+    --accent: #0a4d2e;
+    --accent-soft: #d8efe2;
+    --live: #e23838;
+    --live-soft: #fde8e8;
+    --gold: #c98a1a;
+    --shadow-sm: 0 1px 2px rgba(14, 16, 20, 0.04);
+    --shadow-md: 0 4px 14px rgba(14, 16, 20, 0.06);
+    --shadow-lg: 0 12px 40px rgba(14, 16, 20, 0.12);
+    --glass-tab-shadow: 0 12px 32px rgba(14, 16, 20, 0.16), 0 2px 8px rgba(14, 16, 20, 0.08);
+  }
+
+  [data-theme="dark"] {
+    --bg: #0a0c0f;
+    --bg-rgb: 10, 12, 15;
+    --surface: #14171c;
+    --surface-rgb: 20, 23, 28;
+    --surface-elev: #1a1e24;
+    --surface-sunken: #0e1115;
+    --border: #23282f;
+    --border-strong: #2d333c;
+    --text: #f1f2f4;
+    --text-secondary: #a3a8b2;
+    --text-muted: #6c727c;
+    --accent: #2dd47e;
+    --accent-soft: #0f3325;
+    --live: #ff5c5c;
+    --live-soft: #2a1414;
+    --gold: #e8b04a;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+    --glass-tab-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.3s ease, color 0.3s ease;
+    min-height: 100vh;
+  }
+
+  .preview-stage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    background:
+      radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 50%),
+      radial-gradient(circle at 80% 90%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 50%),
+      var(--bg);
+  }
+
+  .phone {
+    width: 390px;
+    max-width: 100%;
+    height: 844px;
+    max-height: calc(100vh - 64px);
+    background: var(--bg);
+    border-radius: 44px;
+    border: 10px solid #1a1a1a;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  [data-theme="dark"] .phone { border-color: #2a2a2a; }
+
+  .notch {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 28px;
+    background: #1a1a1a;
+    border-radius: 20px;
+    z-index: 100;
+  }
+
+  .status-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 28px 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    z-index: 60;
+    pointer-events: none;
+  }
+  .status-icons { display: flex; gap: 5px; align-items: center; }
+  .status-icons svg { width: 16px; height: 16px; }
+
+  /* ============ APP SHELL ============ */
+  .app {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg);
+    scrollbar-width: none;
+    position: relative;
+  }
+  .app::-webkit-scrollbar { display: none; }
+
+  /* ============ FROSTED HEADER (iOS 26 style) ============ */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    padding: 50px 18px 12px;
+    background: rgba(var(--bg-rgb), 0.72);
+    backdrop-filter: saturate(180%) blur(24px);
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+  }
+
+  /* Soft fade gradient below header so content dissolves rather than getting hard-cut */
+  .header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -20px;
+    height: 20px;
+    background: linear-gradient(
+      to bottom,
+      rgba(var(--bg-rgb), 0.5) 0%,
+      rgba(var(--bg-rgb), 0) 100%
+    );
+    pointer-events: none;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .app-title {
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    color: var(--text);
+  }
+  .app-title .dot { color: var(--accent); }
+
+  .header-actions { display: flex; gap: 6px; }
+
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(var(--surface-rgb), 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--text);
+    transition: all 0.2s ease;
+  }
+  .icon-btn:hover {
+    background: var(--surface-elev);
+    border-color: var(--border-strong);
+  }
+  .icon-btn:active { transform: scale(0.94); }
+  .icon-btn svg { width: 18px; height: 18px; }
+
+  /* Day selector */
+  .day-selector {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 4px 2px 6px;
+    scrollbar-width: none;
+    margin: 0 -2px;
+  }
+  .day-selector::-webkit-scrollbar { display: none; }
+
+  .day-pill {
+    flex: 0 0 auto;
+    min-width: 56px;
+    padding: 9px 4px;
+    border-radius: 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .day-pill:hover { background: rgba(var(--surface-rgb), 0.6); }
+  .day-pill.active { background: var(--text); color: var(--bg); }
+  .day-pill.active .day-label { color: var(--bg); opacity: 0.7; }
+  .day-pill.active .day-number { color: var(--bg); }
+
+  .day-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+  .day-number {
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .day-pill.today .day-label { color: var(--accent); }
+
+  /* Filter chips */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    padding: 16px 18px 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+
+  .chip {
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+  .chip:hover { border-color: var(--border-strong); }
+  .chip.active {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+  }
+  .chip .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--live);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* League groups */
+  .league-section {
+    margin: 0 14px 14px;
+    background: var(--surface);
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .league-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 14px 11px;
+    border-bottom: 1px solid var(--border);
+  }
+  .league-info { display: flex; align-items: center; gap: 10px; }
+  .league-flag {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #02529c 0%, #02529c 33%, #ffffff 33%, #ffffff 38%, #dc1e35 38%, #dc1e35 62%, #ffffff 62%, #ffffff 67%, #02529c 67%);
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+  }
+  .league-meta { display: flex; flex-direction: column; gap: 1px; }
+  .league-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .league-country {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .league-toggle { color: var(--text-muted); cursor: pointer; padding: 4px; }
+  .league-toggle svg { width: 14px; height: 14px; }
+
+  /* Linear match row — no star column */
+  .match {
+    display: grid;
+    grid-template-columns: 40px 1fr 54px 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 18px 14px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .match:last-child { border-bottom: none; }
+  .match:hover { background: var(--surface-sunken); }
+
+  .match-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    min-height: 18px;
+  }
+  .match-status.live { color: var(--live); }
+  .match-status.live::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--live);
+    animation: pulse 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .match-status.live .min {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .match-team {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .team-home { justify-content: flex-end; }
+  .team-away { justify-content: flex-start; }
+
+  .team-badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+  }
+  [data-theme="dark"] .team-badge {
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .team-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .match.finished .match-team.lost .team-name { color: var(--text-muted); font-weight: 500; }
+  .match.finished .match-team.lost .team-badge { opacity: 0.7; }
+
+  .match-center {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+  }
+  .match-center.score {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .match-center.time {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: -0.01em;
+  }
+  .match-center .sep {
+    margin: 0 2px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* Team badge colors */
+  .b-kr { background: #1a1a1a; }
+  .b-valur { background: #c8102e; }
+  .b-fh { background: linear-gradient(135deg, #ffffff 0%, #ffffff 50%, #000 50%, #000 100%); color: #000; }
+  .b-blik { background: #1b8c3f; }
+  .b-vik { background: linear-gradient(135deg, #c8102e 50%, #000 50%); }
+  .b-stjarnan { background: linear-gradient(135deg, #f5c518 50%, #003d7a 50%); }
+  .b-ia { background: linear-gradient(135deg, #f5c518 50%, #000 50%); color: #000; }
+  .b-fram { background: #003d7a; }
+  .b-ka { background: linear-gradient(135deg, #ffd400 50%, #003d7a 50%); color: #003d7a; }
+  .b-fylkir { background: linear-gradient(135deg, #c8102e 50%, #1a1a1a 50%); }
+  .b-throttur { background: #c8102e; }
+  .b-keflavik { background: linear-gradient(135deg, #1a1a1a 50%, #ffd400 50%); }
+
+  .section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 22px 8px;
+  }
+  .section-heading h2 {
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .section-heading .count {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--surface);
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+
+  .league-section.has-live {
+    border-color: color-mix(in srgb, var(--live) 28%, var(--border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--live) 8%, transparent);
+  }
+
+  /* ============ iOS 26 FLOATING BOTTOM DOCK ============ */
+  .bottom-dock {
+    position: absolute;
+    bottom: 18px;
+    left: 14px;
+    right: 14px;
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    z-index: 70;
+    pointer-events: none;
+  }
+  .bottom-dock > * { pointer-events: auto; }
+
+  .tabbar {
+    flex: 1;
+    background: rgba(var(--surface-rgb), 0.65);
+    backdrop-filter: saturate(180%) blur(28px);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 6px 4px;
+    box-shadow: var(--glass-tab-shadow);
+  }
+  [data-theme="light"] .tabbar {
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+    border-radius: 18px;
+  }
+  .tab svg { width: 22px; height: 22px; }
+  .tab span {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .tab.active { color: var(--text); }
+  .tab.active svg { color: var(--accent); }
+
+  /* Separate floating search button */
+  .search-pill {
+    width: 58px;
+    background: rgba(var(--surface-rgb), 0.65);
+    backdrop-filter: saturate(180%) blur(28px);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--text);
+    box-shadow: var(--glass-tab-shadow);
+    transition: transform 0.15s ease;
+  }
+  [data-theme="light"] .search-pill {
+    background: rgba(255, 255, 255, 0.7);
+  }
+  .search-pill:hover { transform: translateY(-1px); }
+  .search-pill:active { transform: scale(0.95); }
+  .search-pill svg { width: 22px; height: 22px; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.92); }
+  }
+
+  .scroll-tail { height: 100px; }
+
+  @media (max-width: 440px) {
+    .preview-stage { padding: 0; }
+    .phone {
+      width: 100%;
+      height: 100vh;
+      max-height: 100vh;
+      border-radius: 0;
+      border: none;
+    }
+    .notch { display: none; }
+  }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="preview-stage">
+
+  <div class="phone">
+    <div class="notch"></div>
+
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+      </div>
+    </div>
+
+    <div class="app">
+
+      <!-- Frosted sticky header -->
+      <div class="header">
+        <div class="header-top">
+          <div class="app-title">Staðan<span class="dot">.</span></div>
+          <div class="header-actions">
+            <button class="icon-btn" id="theme-toggle" title="Skipta þema">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="theme-icon">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </button>
+            <button class="icon-btn" title="Stillingar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="day-selector">
+          <div class="day-pill"><span class="day-label">Fim</span><span class="day-number">7</span></div>
+          <div class="day-pill"><span class="day-label">Fös</span><span class="day-number">8</span></div>
+          <div class="day-pill"><span class="day-label">Lau</span><span class="day-number">9</span></div>
+          <div class="day-pill active today"><span class="day-label">Í dag</span><span class="day-number">10</span></div>
+          <div class="day-pill"><span class="day-label">Mán</span><span class="day-number">11</span></div>
+          <div class="day-pill"><span class="day-label">Þri</span><span class="day-number">12</span></div>
+          <div class="day-pill"><span class="day-label">Mið</span><span class="day-number">13</span></div>
+          <div class="day-pill"><span class="day-label">Fim</span><span class="day-number">14</span></div>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <div class="chip active">Allir leikir</div>
+        <div class="chip"><span class="live-dot"></span>Í beinni</div>
+        <div class="chip">Uppáhald</div>
+        <div class="chip">Karla</div>
+        <div class="chip">Kvenna</div>
+      </div>
+
+      <div class="section-heading">
+        <h2>Sunnudagur · 10. maí</h2>
+        <span class="count">6 leikir</span>
+      </div>
+
+      <div class="league-section has-live">
+        <div class="league-header">
+          <div class="league-info">
+            <div class="league-flag"></div>
+            <div class="league-meta">
+              <div class="league-name">Besta deild karla</div>
+              <div class="league-country">Ísland · Umferð 4</div>
+            </div>
+          </div>
+          <div class="league-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </div>
+
+        <div class="match">
+          <div class="match-status live"><span class="min">67'</span></div>
+          <div class="match-team team-home">
+            <span class="team-name">Valur</span>
+            <span class="team-badge b-valur">VAL</span>
+          </div>
+          <div class="match-center score">2<span class="sep">–</span>1</div>
+          <div class="match-team team-away">
+            <span class="team-badge b-kr">KR</span>
+            <span class="team-name">KR</span>
+          </div>
+        </div>
+
+        <div class="match">
+          <div class="match-status">HT</div>
+          <div class="match-team team-home">
+            <span class="team-name">Breiðablik</span>
+            <span class="team-badge b-blik">BRE</span>
+          </div>
+          <div class="match-center score">0<span class="sep">–</span>0</div>
+          <div class="match-team team-away">
+            <span class="team-badge b-fh">FH</span>
+            <span class="team-name">FH</span>
+          </div>
+        </div>
+
+        <div class="match upcoming">
+          <div class="match-status"></div>
+          <div class="match-team team-home">
+            <span class="team-name">Víkingur R.</span>
+            <span class="team-badge b-vik">VÍK</span>
+          </div>
+          <div class="match-center time">19:15</div>
+          <div class="match-team team-away">
+            <span class="team-badge b-stjarnan">STJ</span>
+            <span class="team-name">Stjarnan</span>
+          </div>
+        </div>
+
+        <div class="match finished">
+          <div class="match-status">FT</div>
+          <div class="match-team team-home">
+            <span class="team-name">ÍA</span>
+            <span class="team-badge b-ia">ÍA</span>
+          </div>
+          <div class="match-center score">3<span class="sep">–</span>1</div>
+          <div class="match-team team-away lost">
+            <span class="team-badge b-fram">FRA</span>
+            <span class="team-name">Fram</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="league-section">
+        <div class="league-header">
+          <div class="league-info">
+            <div class="league-flag"></div>
+            <div class="league-meta">
+              <div class="league-name">Lengjudeild karla</div>
+              <div class="league-country">Ísland · Umferð 4</div>
+            </div>
+          </div>
+          <div class="league-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </div>
+
+        <div class="match upcoming">
+          <div class="match-status"></div>
+          <div class="match-team team-home">
+            <span class="team-name">KA Akureyri</span>
+            <span class="team-badge b-ka">KA</span>
+          </div>
+          <div class="match-center time">14:00</div>
+          <div class="match-team team-away">
+            <span class="team-badge b-throttur">ÞRÓ</span>
+            <span class="team-name">Þróttur R.</span>
+          </div>
+        </div>
+
+        <div class="match upcoming">
+          <div class="match-status"></div>
+          <div class="match-team team-home">
+            <span class="team-name">Keflavík</span>
+            <span class="team-badge b-keflavik">KEF</span>
+          </div>
+          <div class="match-center time">16:00</div>
+          <div class="match-team team-away">
+            <span class="team-badge b-fylkir">FYL</span>
+            <span class="team-name">Fylkir</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="league-section">
+        <div class="league-header">
+          <div class="league-info">
+            <div class="league-flag"></div>
+            <div class="league-meta">
+              <div class="league-name">Besta deild kvenna</div>
+              <div class="league-country">Ísland · Umferð 3</div>
+            </div>
+          </div>
+          <div class="league-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </div>
+
+        <div class="match upcoming">
+          <div class="match-status"></div>
+          <div class="match-team team-home">
+            <span class="team-name">Breiðablik</span>
+            <span class="team-badge b-blik">BRE</span>
+          </div>
+          <div class="match-center time">17:30</div>
+          <div class="match-team team-away">
+            <span class="team-badge b-valur">VAL</span>
+            <span class="team-name">Valur</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll-tail"></div>
+
+    </div>
+
+    <!-- iOS 26 floating dock: tab pill + separate search circle -->
+    <div class="bottom-dock">
+      <div class="tabbar">
+        <div class="tab active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg>
+          <span>Leikir</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+          <span>Mót</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8"></path><path d="M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg>
+          <span>Fréttir</span>
+        </div>
+      </div>
+      <button class="search-pill" title="Leita">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path>
+        </svg>
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  const root = document.body;
+  const toggle = document.getElementById('theme-toggle');
+  const icon = document.getElementById('theme-icon');
+
+  const sunIcon = `<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>`;
+  const moonIcon = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>`;
+
+  toggle.addEventListener('click', () => {
+    const current = root.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    icon.innerHTML = next === 'dark' ? moonIcon : sunIcon;
+  });
+
+  document.querySelectorAll('.day-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.day-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
