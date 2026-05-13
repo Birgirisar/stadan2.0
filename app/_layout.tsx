@@ -20,6 +20,8 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
+import { BottomDock } from '../components/ui/BottomDock';
 import { ThemeProvider } from '../lib/theme/ThemeProvider';
 import { useTheme } from '../lib/theme/useTheme';
 
@@ -30,6 +32,16 @@ const queryClient = new QueryClient();
 function ThemedStatusBar() {
   const { theme } = useTheme();
   return <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />;
+}
+
+function AppShell() {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <Stack screenOptions={{ headerShown: false }} />
+      <BottomDock />
+    </View>
+  );
 }
 
 export default function RootLayout() {
@@ -58,7 +70,7 @@ export default function RootLayout() {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <ThemedStatusBar />
-        <Stack screenOptions={{ headerShown: false }} />
+        <AppShell />
       </QueryClientProvider>
     </ThemeProvider>
   );

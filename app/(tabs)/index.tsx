@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LEAGUES } from '../../constants/leagues';
 import { useFixturesByDate } from '../../lib/api/fixtures';
@@ -46,6 +46,30 @@ export default function LeikirScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [headerHeight, setHeaderHeight] = useState(insets.top + 130);
 
+  // Ref so PanResponder closure always has the latest date without being recreated
+  const shiftDay = useRef<(delta: number) => void>(() => {});
+  useEffect(() => {
+    shiftDay.current = (delta: number) => {
+      setSelectedDate((prev) => {
+        const next = new Date(prev);
+        next.setDate(next.getDate() + delta);
+        return next;
+      });
+    };
+  }, []);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      // Only claim the gesture when horizontal movement clearly dominates
+      onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+        Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 12,
+      onPanResponderRelease: (_, { dx }) => {
+        if (dx < -100) shiftDay.current(1);
+        else if (dx > 100) shiftDay.current(-1);
+      },
+    })
+  ).current;
+
   const { data: fixtures = [], isLoading, error, refetch } = useFixturesByDate(selectedDate);
 
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
@@ -64,7 +88,7 @@ export default function LeikirScreen() {
   const sectionLabel = getSectionHeading(selectedDate);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }} {...panResponder.panHandlers}>
       {/* Scrollable content — starts padded by headerHeight */}
       <ScrollView
         style={{ flex: 1 }}

@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
-import { BottomDock } from '../../components/ui/BottomDock';
 import { useTheme } from '../../lib/theme/useTheme';
 
 export default function TabsLayout() {
@@ -17,7 +16,6 @@ export default function TabsLayout() {
         <Tabs.Screen name="mot" options={{ title: 'Mót' }} />
         <Tabs.Screen name="frettir" options={{ title: 'Fréttir' }} />
       </Tabs>
-      <BottomDock />
     </View>
   );
 }

@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Staðan — Leikupplýsingar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f4f4f1;
+    --bg-rgb: 244, 244, 241;
+    --surface: #ffffff;
+    --surface-rgb: 255, 255, 255;
+    --surface-elev: #ffffff;
+    --surface-sunken: #ebebe6;
+    --border: #e3e3dc;
+    --border-strong: #d4d4cb;
+    --text: #0e1014;
+    --text-secondary: #5a5d66;
+    --text-muted: #8a8d96;
+    --accent: #0a4d2e;
+    --accent-soft: #d8efe2;
+    --live: #e23838;
+    --gold: #c98a1a;
+    --win: #1b8c3f;
+    --draw: #6c727c;
+    --loss: #d6334a;
+    --shadow-lg: 0 12px 40px rgba(14, 16, 20, 0.12);
+    --glass-tab-shadow: 0 12px 32px rgba(14, 16, 20, 0.16), 0 2px 8px rgba(14, 16, 20, 0.08);
+  }
+
+  [data-theme="dark"] {
+    --bg: #0a0c0f;
+    --bg-rgb: 10, 12, 15;
+    --surface: #14171c;
+    --surface-rgb: 20, 23, 28;
+    --surface-elev: #1a1e24;
+    --surface-sunken: #0e1115;
+    --border: #23282f;
+    --border-strong: #2d333c;
+    --text: #f1f2f4;
+    --text-secondary: #a3a8b2;
+    --text-muted: #6c727c;
+    --accent: #2dd47e;
+    --accent-soft: #0f3325;
+    --live: #ff5c5c;
+    --gold: #e8b04a;
+    --win: #15a85f;
+    --draw: #3a3f47;
+    --loss: #d6334a;
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+    --glass-tab-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.3s ease, color 0.3s ease;
+    min-height: 100vh;
+  }
+
+  .preview-stage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    background:
+      radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 50%),
+      radial-gradient(circle at 80% 90%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 50%),
+      var(--bg);
+  }
+
+  .phone {
+    width: 390px;
+    max-width: 100%;
+    height: 844px;
+    max-height: calc(100vh - 64px);
+    background: var(--bg);
+    border-radius: 44px;
+    border: 10px solid #1a1a1a;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  [data-theme="dark"] .phone { border-color: #2a2a2a; }
+
+  .notch {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 28px;
+    background: #1a1a1a;
+    border-radius: 20px;
+    z-index: 100;
+  }
+
+  .status-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 28px 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    z-index: 95;
+    pointer-events: none;
+  }
+  .status-icons { display: flex; gap: 5px; align-items: center; }
+  .status-icons svg { width: 16px; height: 16px; }
+
+  /* ============ STICKY HEADER STACK ============ */
+  .sticky-stack {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 80;
+    pointer-events: none;
+  }
+  .sticky-stack > * { pointer-events: auto; }
+
+  /* COLLAPSED COMPACT BAR — no border, no "Leik lokið" */
+  .compact-bar {
+    background: rgba(var(--bg-rgb), 0.78);
+    backdrop-filter: saturate(180%) blur(24px);
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+    padding: 50px 14px 12px;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+  }
+  .compact-bar.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .compact-row {
+    display: grid;
+    grid-template-columns: 38px 1fr 38px;
+    align-items: center;
+    gap: 10px;
+  }
+  .compact-score-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .compact-team {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .compact-crest {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .compact-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .compact-score {
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    padding: 0 8px;
+  }
+  .compact-score .sep { color: var(--text-muted); margin: 0 4px; font-weight: 600; }
+
+  .app {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg);
+    scrollbar-width: none;
+    position: relative;
+  }
+  .app::-webkit-scrollbar { display: none; }
+
+  /* ============ HERO (full version, scrolls away) ============ */
+  .hero {
+    position: relative;
+    padding: 50px 18px 14px;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 20%, var(--surface)) 0%,
+      color-mix(in srgb, var(--accent) 6%, var(--surface)) 60%,
+      var(--surface) 100%
+    );
+    overflow: hidden;
+  }
+  [data-theme="dark"] .hero {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 18%, #0e1115) 0%,
+      color-mix(in srgb, var(--accent) 5%, #0e1115) 60%,
+      var(--surface) 100%
+    );
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 50px;
+    left: -10%;
+    right: -10%;
+    bottom: 0;
+    background: radial-gradient(ellipse 60% 50% at 50% 100%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 2;
+  }
+  .back-btn, .share-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(var(--surface-rgb), 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--text);
+    transition: all 0.2s ease;
+  }
+  .back-btn:active, .share-btn:active { transform: scale(0.94); }
+  .back-btn svg, .share-btn svg { width: 18px; height: 18px; }
+
+  .hero-meta-top { text-align: center; flex: 1; }
+  .league-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(var(--surface-rgb), 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+  }
+  .league-pill .flag {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #02529c 0%, #02529c 33%, #ffffff 33%, #ffffff 38%, #dc1e35 38%, #dc1e35 62%, #ffffff 62%, #ffffff 67%, #02529c 67%);
+  }
+
+  /* Scoreline */
+  .scoreline {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: start;
+    gap: 6px;
+    padding: 6px 6px 4px;
+    position: relative;
+    z-index: 2;
+  }
+  .team-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .team-crest {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-family: 'Bricolage Grotesque', serif;
+    font-weight: 800;
+    color: #fff;
+    font-size: 20px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18), inset 0 0 0 2px rgba(255,255,255,0.08);
+  }
+  .team-block .team-label {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .scorers {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: center;
+    width: 100%;
+  }
+  .scorer {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.3;
+    text-align: center;
+    font-weight: 500;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .scorer-name {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .scorer-mins {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  /* Center score column — no ball icon, status + venue pushed closer to score */
+  .score-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 110px;
+  }
+  .score-value {
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 44px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .score-value .sep { color: var(--text-muted); font-weight: 600; }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .status-pill.ft {
+    background: var(--surface-sunken);
+    color: var(--text-muted);
+  }
+  .status-pill.live {
+    background: var(--live);
+    color: #fff;
+  }
+  .status-pill.live::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #fff;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .venue-line {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  .venue-line svg { width: 11px; height: 11px; vertical-align: -1px; margin-right: 3px; opacity: 0.8; }
+
+  /* Team crest colors */
+  .crest-valur, .c-valur { background: linear-gradient(135deg, #d61f3a 0%, #a8121f 100%); }
+  .crest-kr, .c-kr { background: linear-gradient(135deg, #2a2a2a 0%, #000 100%); }
+  .c-fh { background: #fff; color: #000 !important; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15); }
+  .c-blik { background: #1b8c3f; }
+  .c-vik { background: linear-gradient(135deg, #c8102e 50%, #000 50%); }
+  .c-stjarnan { background: linear-gradient(135deg, #f5c518 50%, #003d7a 50%); }
+  .c-ia { background: #f5c518; color: #000 !important; }
+  .c-fram { background: #003d7a; }
+  .c-fylkir { background: linear-gradient(135deg, #c8102e 50%, #1a1a1a 50%); }
+  .c-throttur { background: #c8102e; }
+
+  /* ============ SUB-TAB BAR ============ */
+  .subtabs-inline {
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-top: -1px;
+  }
+  .subtabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 10px;
+  }
+  .subtabs::-webkit-scrollbar { display: none; }
+  .subtab {
+    flex: 0 0 auto;
+    padding: 13px 14px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    position: relative;
+    white-space: nowrap;
+    transition: color 0.2s ease;
+  }
+  .subtab:hover { color: var(--text-secondary); }
+  .subtab.active {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .subtab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 14px;
+    right: 14px;
+    height: 2.5px;
+    background: var(--text);
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* ============ CONTENT SECTIONS ============ */
+  .section {
+    margin: 16px 14px 0;
+    background: var(--surface);
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 14px 16px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-title {
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .section-link {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+  }
+  .section-link:hover { color: var(--text); }
+  .section-link svg { width: 12px; height: 12px; }
+
+  /* ============ EVENT TIMELINE ============ */
+  .timeline {
+    position: relative;
+    padding: 6px 0 12px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 50%;
+    width: 2px;
+    background: var(--border);
+    transform: translateX(-1px);
+  }
+
+  .tl-event {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    position: relative;
+  }
+  .tl-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .tl-event.home .tl-content {
+    align-items: flex-end;
+    text-align: right;
+  }
+  .tl-event.away .tl-content {
+    align-items: flex-start;
+    text-align: left;
+    grid-column: 3;
+  }
+  .tl-event.home .tl-spacer {
+    grid-column: 3;
+  }
+
+  .tl-minute {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    width: 38px;
+    height: 30px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 700;
+    z-index: 2;
+    position: relative;
+  }
+
+  .tl-line-1 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .tl-event.home .tl-line-1 { flex-direction: row-reverse; }
+  .tl-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+  }
+  .tl-icon svg { width: 16px; height: 16px; }
+  .tl-icon.goal { color: var(--text); }
+  .tl-icon.pen-goal { color: var(--accent); }
+  .tl-icon.yellow {
+    width: 11px;
+    height: 14px;
+    background: #f5c518;
+    border-radius: 2px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
+  }
+  .tl-icon.red {
+    width: 11px;
+    height: 14px;
+    background: #d63031;
+    border-radius: 2px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
+  }
+  .tl-icon.sub-arrow { color: var(--accent); }
+
+  .tl-line-2 {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+
+  /* Halftime/full-time pill — no horizontal line through it */
+  .tl-ht {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+    position: relative;
+  }
+  .tl-ht-pill {
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 2;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ============ MAN OF THE MATCH ============ */
+  .motm-card {
+    margin: 16px 14px 0;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--gold) 22%, var(--surface)) 0%,
+      var(--surface) 60%
+    );
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--gold) 30%, var(--border));
+    overflow: hidden;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+  }
+  .motm-card::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 100px;
+    background: radial-gradient(circle at 100% 50%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 70%);
+    pointer-events: none;
+  }
+  .motm-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--surface-sunken);
+    border: 2px solid color-mix(in srgb, var(--gold) 40%, var(--border));
+    display: grid;
+    place-items: center;
+    font-family: 'Bricolage Grotesque', serif;
+    font-weight: 800;
+    font-size: 17px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .motm-text { flex: 1; min-width: 0; position: relative; z-index: 2; }
+  .motm-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 3px;
+  }
+  .motm-label svg { width: 12px; height: 12px; }
+  .motm-player {
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    margin-bottom: 2px;
+  }
+  .motm-team {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+  .motm-rating {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+    background: var(--gold);
+    padding: 5px 10px;
+    border-radius: 10px;
+    letter-spacing: -0.02em;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ============ FORM (FotMob-style) — more space between columns ============ */
+  .form-grid {
+    padding: 6px 12px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 40px;   /* bumped from 10px → 40px */
+    row-gap: 10px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 24px 1fr 24px;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+  .form-crest {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .form-score-pill {
+    height: 28px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+  }
+  .form-score-pill.W { background: var(--win); }
+  .form-score-pill.D { background: var(--draw); }
+  .form-score-pill.L { background: var(--loss); }
+
+  .form-row.most-recent::after {
+    content: '';
+    position: absolute;
+    left: 32px;
+    right: 32px;
+    bottom: -4px;
+    height: 2px;
+    border-radius: 2px;
+  }
+  .form-row.most-recent.W::after { background: var(--win); }
+  .form-row.most-recent.D::after { background: var(--draw); }
+  .form-row.most-recent.L::after { background: var(--loss); }
+
+  /* ============ MINI TABLE ============ */
+  .mini-table { padding: 0 0 6px; }
+  .mt-header {
+    display: grid;
+    grid-template-columns: 28px 1fr 28px 28px 36px;
+    gap: 6px;
+    padding: 4px 16px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .mt-header .num { text-align: center; }
+  .mt-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 28px 28px 36px;
+    gap: 6px;
+    padding: 9px 16px;
+    align-items: center;
+    border-top: 1px solid var(--border);
+  }
+  .mt-row.divider {
+    padding: 6px 16px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 10.5px;
+    text-align: center;
+    justify-content: center;
+    grid-template-columns: 1fr;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .mt-pos {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text-secondary);
+  }
+  .mt-team-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .mt-team-crest {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 7.5px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .mt-team-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mt-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+  .mt-pts {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text);
+    text-align: center;
+  }
+  .mt-row.highlight { background: var(--accent-soft); }
+  .mt-row.highlight .mt-team-name { font-weight: 700; }
+  [data-theme="dark"] .mt-row.highlight { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+  /* Bottom dock */
+  .bottom-dock {
+    position: absolute;
+    bottom: 18px;
+    left: 14px;
+    right: 14px;
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    z-index: 70;
+    pointer-events: none;
+  }
+  .bottom-dock > * { pointer-events: auto; }
+  .tabbar {
+    flex: 1;
+    background: rgba(var(--surface-rgb), 0.65);
+    backdrop-filter: saturate(180%) blur(28px);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 6px 4px;
+    box-shadow: var(--glass-tab-shadow);
+  }
+  [data-theme="light"] .tabbar { background: rgba(255, 255, 255, 0.7); }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+    border-radius: 18px;
+  }
+  .tab svg { width: 22px; height: 22px; }
+  .tab span { font-size: 10px; font-weight: 600; letter-spacing: 0.01em; }
+  .tab.active { color: var(--text); }
+  .tab.active svg { color: var(--accent); }
+  .search-pill {
+    width: 58px;
+    background: rgba(var(--surface-rgb), 0.65);
+    backdrop-filter: saturate(180%) blur(28px);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--text);
+    box-shadow: var(--glass-tab-shadow);
+  }
+  [data-theme="light"] .search-pill { background: rgba(255, 255, 255, 0.7); }
+  .search-pill svg { width: 22px; height: 22px; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.92); }
+  }
+
+  .scroll-tail { height: 100px; }
+
+  @media (max-width: 440px) {
+    .preview-stage { padding: 0; }
+    .phone {
+      width: 100%;
+      height: 100vh;
+      max-height: 100vh;
+      border-radius: 0;
+      border: none;
+    }
+    .notch { display: none; }
+  }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="preview-stage">
+
+  <div class="phone">
+    <div class="notch"></div>
+
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+      </div>
+    </div>
+
+    <!-- Sticky compact bar — no "Leik lokið", no bottom border -->
+    <div class="sticky-stack">
+      <div class="compact-bar" id="compactBar">
+        <div class="compact-row">
+          <button class="back-btn" title="Til baka">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <div class="compact-score-row">
+            <div class="compact-team">
+              <div class="compact-crest c-valur">VAL</div>
+              <div class="compact-name">Valur</div>
+            </div>
+            <div class="compact-score">3<span class="sep">–</span>1</div>
+            <div class="compact-team">
+              <div class="compact-name">KR</div>
+              <div class="compact-crest c-kr">KR</div>
+            </div>
+          </div>
+          <button class="share-btn" title="Deila">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="app" id="appScroll">
+
+      <!-- ===== FULL HERO ===== -->
+      <div class="hero" id="hero">
+        <div class="hero-top">
+          <button class="back-btn" title="Til baka">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <div class="hero-meta-top">
+            <span class="league-pill"><span class="flag"></span>Besta deild karla · Umferð 4</span>
+          </div>
+          <button class="share-btn" title="Deila">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+          </button>
+        </div>
+
+        <div class="scoreline">
+          <div class="team-block">
+            <div class="team-crest crest-valur">VAL</div>
+            <div class="team-label">Valur</div>
+            <div class="scorers">
+              <div class="scorer">
+                <span class="scorer-name">S. A. Guðjohnsen</span>
+                <span class="scorer-mins">12', 54'</span>
+              </div>
+              <div class="scorer">
+                <span class="scorer-name">A. L. Guðjohnsen</span>
+                <span class="scorer-mins">89'</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- No ball icon — status + venue sit directly under score -->
+          <div class="score-block">
+            <div class="score-value"><span>3</span><span class="sep">–</span><span>1</span></div>
+            <div class="status-pill ft">Leik lokið</div>
+            <div class="venue-line">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              Hlíðarendi
+            </div>
+          </div>
+
+          <div class="team-block">
+            <div class="team-crest crest-kr">KR</div>
+            <div class="team-label">KR</div>
+            <div class="scorers">
+              <div class="scorer">
+                <span class="scorer-name">A. B. Jónsson</span>
+                <span class="scorer-mins">73'</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== SUB-TAB BAR ===== -->
+      <div class="subtabs-inline" id="subtabsInline">
+        <div class="subtabs">
+          <div class="subtab active">Yfirlit</div>
+          <div class="subtab">Lýsing</div>
+          <div class="subtab">Liðin</div>
+          <div class="subtab">Tafla</div>
+          <div class="subtab">Tölfræði</div>
+          <div class="subtab">Innbyrðis</div>
+        </div>
+      </div>
+
+      <!-- ===== MAN OF THE MATCH ===== -->
+      <div class="motm-card">
+        <div class="motm-avatar">SK</div>
+        <div class="motm-text">
+          <div class="motm-label">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.39 6.45L21 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.61-.82L12 2z"/></svg>
+            Maður leiksins
+          </div>
+          <div class="motm-player">Sveinn Aron Guðjohnsen</div>
+          <div class="motm-team">Valur · Framherji</div>
+        </div>
+        <div class="motm-rating">8.7</div>
+      </div>
+
+      <!-- ===== EVENT TIMELINE ===== -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Atburðir</span>
+        </div>
+        <div class="timeline">
+
+          <div class="tl-event home">
+            <div class="tl-content">
+              <div class="tl-line-1">
+                <span class="tl-icon goal">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2zm6.93 7.5l-1.39 1.01-2.34-1.7.49-2.86 1.55-.5A8.07 8.07 0 0 1 18.93 9.5zM12 4a7.95 7.95 0 0 1 2.42.37l-.45 2.6h-3.94l-.45-2.6A7.95 7.95 0 0 1 12 4zM6.76 5.45l1.55.5.49 2.86-2.34 1.7L5.07 9.5a8.07 8.07 0 0 1 1.69-4.05zM4.74 14.85l1.16-.94 2.66 1.04.72 2.79-1.07 1.36a7.99 7.99 0 0 1-3.47-4.25zm5.04 5.04l-.86-1.32 1.31-2.5h3.54l1.31 2.5-.86 1.32a8.03 8.03 0 0 1-4.44 0zm9.74-5.04a7.99 7.99 0 0 1-3.47 4.25l-1.07-1.36.72-2.79 2.66-1.04zM12 14.5L9.5 12.5l1-3h3l1 3z"/></svg>
+                </span>
+                <span>Sveinn A. Guðjohnsen</span>
+              </div>
+              <div class="tl-line-2">Stoðsending: Andri Lucas</div>
+            </div>
+            <div class="tl-minute">12'</div>
+            <div class="tl-spacer"></div>
+          </div>
+
+          <div class="tl-event away">
+            <div class="tl-spacer"></div>
+            <div class="tl-minute">31'</div>
+            <div class="tl-content">
+              <div class="tl-line-1">
+                <span class="tl-icon yellow"></span>
+                <span>Finnur Tómas Pálmason</span>
+              </div>
+              <div class="tl-line-2">Gula spjaldið</div>
+            </div>
+          </div>
+
+          <!-- Halftime divider — no horizontal line -->
+          <div class="tl-ht">
+            <div class="tl-ht-pill">Hálfleikur · 1–0</div>
+          </div>
+
+          <div class="tl-event home">
+            <div class="tl-content">
+              <div class="tl-line-1">
+                <span class="tl-icon pen-goal">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2zm6.93 7.5l-1.39 1.01-2.34-1.7.49-2.86 1.55-.5A8.07 8.07 0 0 1 18.93 9.5zM12 4a7.95 7.95 0 0 1 2.42.37l-.45 2.6h-3.94l-.45-2.6A7.95 7.95 0 0 1 12 4zM6.76 5.45l1.55.5.49 2.86-2.34 1.7L5.07 9.5a8.07 8.07 0 0 1 1.69-4.05zM4.74 14.85l1.16-.94 2.66 1.04.72 2.79-1.07 1.36a7.99 7.99 0 0 1-3.47-4.25zm5.04 5.04l-.86-1.32 1.31-2.5h3.54l1.31 2.5-.86 1.32a8.03 8.03 0 0 1-4.44 0zm9.74-5.04a7.99 7.99 0 0 1-3.47 4.25l-1.07-1.36.72-2.79 2.66-1.04zM12 14.5L9.5 12.5l1-3h3l1 3z"/></svg>
+                </span>
+                <span>Sveinn A. Guðjohnsen</span>
+              </div>
+              <div class="tl-line-2">Vítaspyrna</div>
+            </div>
+            <div class="tl-minute">54'</div>
+            <div class="tl-spacer"></div>
+          </div>
+
+          <div class="tl-event away">
+            <div class="tl-spacer"></div>
+            <div class="tl-minute">67'</div>
+            <div class="tl-content">
+              <div class="tl-line-1">
+                <span class="tl-icon sub-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M21 3l-7 7"/><path d="M8 21H3v-5"/><path d="M3 21l7-7"/></svg>
+                </span>
+                <span>Aron Bjarni Jónsson</span>
+              </div>
+              <div class="tl-line-2">Inn fyrir Birki Má Sævarsson</div>
+            </div>
+          </div>
+
+          <div class="tl-event away">
+            <div class="tl-spacer"></div>
+            <div class="tl-minute">73'</div>
+            <div class="tl-content">
+              <div class="tl-line-1">
+                <span class="tl-icon goal">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2zm6.93 7.5l-1.39 1.01-2.34-1.7.49-2.86 1.55-.5A8.07 8.07 0 0 1 18.93 9.5zM12 4a7.95 7.95 0 0 1 2.42.37l-.45 2.6h-3.94l-.45-2.6A7.95 7.95 0 0 1 12 4zM6.76 5.45l1.55.5.49 2.86-2.34 1.7L5.07 9.5a8.07 8.07 0 0 1 1.69-4.05zM4.74 14.85l1.16-.94 2.66 1.04.72 2.79-1.07 1.36a7.99 7.99 0 0 1-3.47-4.25zm5.04 5.04l-.86-1.32 1.31-2.5h3.54l1.31 2.5-.86 1.32a8.03 8.03 0 0 1-4.44 0zm9.74-5.04a7.99 7.99 0 0 1-3.47 4.25l-1.07-1.36.72-2.79 2.66-1.04zM12 14.5L9.5 12.5l1-3h3l1 3z"/></svg>
+                </span>
+                <span>Aron Bjarni Jónsson</span>
+              </div>
+              <div class="tl-line-2">Stoðsending: Pálmi Rafn Pálmason</div>
+            </div>
+          </div>
+
+          <div class="tl-event home">
+            <div class="tl-content">
+              <div class="tl-line-1">
+                <span class="tl-icon goal">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2zm6.93 7.5l-1.39 1.01-2.34-1.7.49-2.86 1.55-.5A8.07 8.07 0 0 1 18.93 9.5zM12 4a7.95 7.95 0 0 1 2.42.37l-.45 2.6h-3.94l-.45-2.6A7.95 7.95 0 0 1 12 4zM6.76 5.45l1.55.5.49 2.86-2.34 1.7L5.07 9.5a8.07 8.07 0 0 1 1.69-4.05zM4.74 14.85l1.16-.94 2.66 1.04.72 2.79-1.07 1.36a7.99 7.99 0 0 1-3.47-4.25zm5.04 5.04l-.86-1.32 1.31-2.5h3.54l1.31 2.5-.86 1.32a8.03 8.03 0 0 1-4.44 0zm9.74-5.04a7.99 7.99 0 0 1-3.47 4.25l-1.07-1.36.72-2.79 2.66-1.04zM12 14.5L9.5 12.5l1-3h3l1 3z"/></svg>
+                </span>
+                <span>Andri Lucas Guðjohnsen</span>
+              </div>
+              <div class="tl-line-2">Stoðsending: Sveinn A. Guðjohnsen</div>
+            </div>
+            <div class="tl-minute">89'</div>
+            <div class="tl-spacer"></div>
+          </div>
+
+          <!-- Full-time pill — no horizontal line -->
+          <div class="tl-ht">
+            <div class="tl-ht-pill">Leik lokið · 3–1</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== FORM (FotMob style, wider gap) ===== -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Form · Síðustu 5</span>
+        </div>
+        <div class="form-grid">
+
+          <div class="form-row most-recent W">
+            <div class="form-crest c-valur">VAL</div>
+            <div class="form-score-pill W">2 - 0</div>
+            <div class="form-crest c-fram">FRA</div>
+          </div>
+          <div class="form-row most-recent L">
+            <div class="form-crest c-kr">KR</div>
+            <div class="form-score-pill L">0 - 1</div>
+            <div class="form-crest c-ia">ÍA</div>
+          </div>
+
+          <div class="form-row W">
+            <div class="form-crest c-stjarnan">STJ</div>
+            <div class="form-score-pill W">3 - 1</div>
+            <div class="form-crest c-valur">VAL</div>
+          </div>
+          <div class="form-row D">
+            <div class="form-crest c-kr">KR</div>
+            <div class="form-score-pill D">2 - 2</div>
+            <div class="form-crest c-fh">FH</div>
+          </div>
+
+          <div class="form-row D">
+            <div class="form-crest c-valur">VAL</div>
+            <div class="form-score-pill D">1 - 1</div>
+            <div class="form-crest c-blik">BRE</div>
+          </div>
+          <div class="form-row L">
+            <div class="form-crest c-blik">BRE</div>
+            <div class="form-score-pill L">3 - 1</div>
+            <div class="form-crest c-kr">KR</div>
+          </div>
+
+          <div class="form-row W">
+            <div class="form-crest c-fylkir">FYL</div>
+            <div class="form-score-pill W">1 - 2</div>
+            <div class="form-crest c-valur">VAL</div>
+          </div>
+          <div class="form-row W">
+            <div class="form-crest c-kr">KR</div>
+            <div class="form-score-pill W">2 - 0</div>
+            <div class="form-crest c-fram">FRA</div>
+          </div>
+
+          <div class="form-row L">
+            <div class="form-crest c-valur">VAL</div>
+            <div class="form-score-pill L">0 - 2</div>
+            <div class="form-crest c-vik">VÍK</div>
+          </div>
+          <div class="form-row D">
+            <div class="form-crest c-stjarnan">STJ</div>
+            <div class="form-score-pill D">1 - 1</div>
+            <div class="form-crest c-kr">KR</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== MINI TABLE ===== -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Staða í deildinni</span>
+          <span class="section-link">
+            Sjá töflu
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </span>
+        </div>
+        <div class="mini-table">
+          <div class="mt-header">
+            <span class="num">#</span>
+            <span>Lið</span>
+            <span class="num">L</span>
+            <span class="num">+/-</span>
+            <span class="num">Stig</span>
+          </div>
+          <div class="mt-row highlight">
+            <div class="mt-pos">2</div>
+            <div class="mt-team-cell">
+              <div class="mt-team-crest c-valur">VAL</div>
+              <div class="mt-team-name">Valur</div>
+            </div>
+            <div class="mt-num">4</div>
+            <div class="mt-num">+5</div>
+            <div class="mt-pts">10</div>
+          </div>
+          <div class="mt-row divider">· · ·</div>
+          <div class="mt-row highlight">
+            <div class="mt-pos">8</div>
+            <div class="mt-team-cell">
+              <div class="mt-team-crest c-kr">KR</div>
+              <div class="mt-team-name">KR</div>
+            </div>
+            <div class="mt-num">4</div>
+            <div class="mt-num">−2</div>
+            <div class="mt-pts">4</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll-tail"></div>
+
+    </div>
+
+    <div class="bottom-dock">
+      <div class="tabbar">
+        <div class="tab active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg>
+          <span>Leikir</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+          <span>Mót</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8"></path><path d="M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg>
+          <span>Fréttir</span>
+        </div>
+      </div>
+      <button class="search-pill" title="Leita">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path>
+        </svg>
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.subtab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.subtab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+    });
+  });
+
+  const app = document.getElementById('appScroll');
+  const compactBar = document.getElementById('compactBar');
+  const subtabsInline = document.getElementById('subtabsInline');
+  const hero = document.getElementById('hero');
+
+  let lastShown = false;
+  function onScroll() {
+    const heroH = hero.offsetHeight;
+    const scroll = app.scrollTop;
+    const threshold = heroH - 60;
+    const shouldShow = scroll > threshold;
+    if (shouldShow !== lastShown) {
+      compactBar.classList.toggle('visible', shouldShow);
+      lastShown = shouldShow;
+    }
+  }
+
+  subtabsInline.style.position = 'sticky';
+  subtabsInline.style.top = '0';
+  subtabsInline.style.zIndex = '50';
+
+  const updateStickyTop = () => {
+    const visible = compactBar.classList.contains('visible');
+    subtabsInline.style.top = visible ? `${compactBar.offsetHeight}px` : '0';
+  };
+
+  app.addEventListener('scroll', () => {
+    onScroll();
+    updateStickyTop();
+  });
+  window.addEventListener('resize', updateStickyTop);
+  updateStickyTop();
+</script>
+
+</body>
+</html>

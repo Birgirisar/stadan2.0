@@ -15,6 +15,9 @@ export const DarkColors = {
   liveSoft: '#2a1414',
   liveBorder: '#61373C',
   gold: '#e8b04a',
+  win: '#15a85f',
+  draw: '#3a3f47',
+  loss: '#d6334a',
 } as const;
 
 export const LightColors = {
@@ -34,6 +37,9 @@ export const LightColors = {
   liveSoft: '#fde8e8',
   liveBorder: '#E3B3AE',
   gold: '#c98a1a',
+  win: '#1b8c3f',
+  draw: '#6c727c',
+  loss: '#d6334a',
 } as const;
 
 export interface ThemeColors {
@@ -53,4 +59,7 @@ export interface ThemeColors {
   liveSoft: string;
   liveBorder: string;
   gold: string;
+  win: string;
+  draw: string;
+  loss: string;
 }

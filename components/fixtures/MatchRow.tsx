@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../lib/theme/useTheme';
 import { formatKickoffTime } from '../../lib/utils/dates';
 import { getScore } from '../../lib/utils/score';
@@ -35,6 +36,7 @@ function PulseDot({ color }: { color: string }) {
 
 export function MatchRow({ fixture, isLast }: Props) {
   const { colors } = useTheme();
+  const router = useRouter();
 
   const home = fixture.participants?.find((p) => p.meta.location === 'home');
   const away = fixture.participants?.find((p) => p.meta.location === 'away');
@@ -45,12 +47,13 @@ export function MatchRow({ fixture, isLast }: Props) {
   const awayIsLoser = false;
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.6}
-      style={[
+    <Pressable
+      onPress={() => router.push(`/match/${fixture.id}` as any)}
+      style={({ pressed }) => [
         styles.row,
         { borderBottomColor: colors.border },
         isLast && styles.lastRow,
+        pressed && { opacity: 0.6 },
       ]}
     >
       {/* Status — 40px */}
@@ -117,7 +120,7 @@ export function MatchRow({ fixture, isLast }: Props) {
 
       {/* Right spacer — balances the 40px statusCol on the left so center column sits at true center */}
       <View style={styles.spacer} />
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
