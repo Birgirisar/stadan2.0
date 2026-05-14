@@ -1,20 +1,36 @@
 import type { Fixture } from './types';
 import { smGet } from './sportmonks';
-import { toDateString } from '../utils/dates';
 
-export async function fetchTeamForm(teamId: number): Promise<Fixture[]> {
-  const to = toDateString(new Date());
-  const fromDate = new Date();
-  fromDate.setMonth(fromDate.getMonth() - 6);
-  const from = toDateString(fromDate);
+interface ScheduleRound {
+  finished: boolean;
+  fixtures: Fixture[];
+}
 
-  const result = await smGet<Fixture[]>(`/fixtures/between/${from}/${to}`, {
-    include: 'participants;scores;state',
-    filters: `fixtureTeams:${teamId};fixtureStates:5`,
-    per_page: '10',
-    order: 'desc',
-  });
+interface ScheduleStage {
+  rounds: ScheduleRound[];
+}
 
-  const fixtures = Array.isArray(result) ? result : [];
-  return fixtures.slice(0, 5);
+export async function fetchTeamForm(teamId: number, seasonId: number): Promise<Fixture[]> {
+  let stages: ScheduleStage[];
+  try {
+    stages = await smGet<ScheduleStage[]>(
+      `/schedules/seasons/${seasonId}/teams/${teamId}`,
+    );
+  } catch (e) {
+    console.error('[teamForm] API error:', e);
+    return [];
+  }
+
+  const allFixtures: Fixture[] = [];
+  for (const stage of stages ?? []) {
+    for (const round of stage.rounds ?? []) {
+      if (!round.finished) continue;
+      for (const fixture of round.fixtures ?? []) {
+        allFixtures.push(fixture);
+      }
+    }
+  }
+
+  allFixtures.sort((a, b) => (b.starting_at_timestamp ?? 0) - (a.starting_at_timestamp ?? 0));
+  return allFixtures.slice(0, 5);
 }

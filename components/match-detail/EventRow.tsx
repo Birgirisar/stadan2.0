@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { FixtureEvent } from '../../lib/api/types';
 import { EVENT_TYPE, formatMinute, getEventLabel } from '../../lib/utils/events';
 import { useTheme } from '../../lib/theme/useTheme';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
   event: FixtureEvent;
@@ -11,18 +12,13 @@ interface Props {
 
 function GoalIcon({ color }: { color: string }) {
   return (
-    <View style={[styles.icon, { width: 16, height: 16 }]}>
-      {/* Simple football circle */}
-      <View style={[styles.ballOuter, { borderColor: color }]}>
-        <View style={[styles.ballInner, { backgroundColor: color }]} />
-      </View>
-    </View>
+    <Ionicons style={[styles.icon]} name="football-outline" size={14} color={color} />  
   );
 }
 
-function CardIcon({ color }: { color: string }) {
+function CardIcon({ color, style }: { color: string; style?: any }) {
   return (
-    <View style={[styles.card, { backgroundColor: color }]} />
+    <View style={[styles.card, { backgroundColor: color }, style]} />
   );
 }
 
@@ -48,7 +44,12 @@ function EventIcon({ iconType, colors }: { iconType: string; colors: ReturnType<
     case 'red':
       return <CardIcon color="#d63031" />;
     case 'yellow-red':
-      return <CardIcon color="#f5c518" />;
+      return (
+        <View style={{ flexDirection: 'row', gap: 2 }}>
+          <CardIcon color="#f5c518" style={styles.yellowCard} />
+          <CardIcon color="#d63031" style={styles.redCard} />
+        </View>
+      );
     case 'sub':
       return <SubIcon color={colors.accent} direction="in" />;
     default:
@@ -76,7 +77,7 @@ export function EventRow({ event, side }: Props) {
           style={[styles.playerName, { color: colors.text }]}
           numberOfLines={1}
         >
-          {abbreviateName(playerName)}
+          {formatName(playerName, "full")}
         </Text>
       </View>
       {/* Sub: player going off */}
@@ -87,7 +88,7 @@ export function EventRow({ event, side }: Props) {
             style={[styles.playerName, { color: colors.textMuted }]}
             numberOfLines={1}
           >
-            {abbreviateName(playerOffName)}
+            {formatName(playerOffName, "full")}
           </Text>
         </View>
       )}
@@ -118,12 +119,25 @@ export function EventRow({ event, side }: Props) {
   );
 }
 
-function abbreviateName(name: string): string {
-  const parts = name.trim().split(' ');
+function formatName(name: string, mode: "full" | "compact" | "scoreboard") {
+  const parts = name.trim().split(" ");
   if (parts.length <= 1) return name;
+
   const last = parts[parts.length - 1];
-  const abbrevs = parts.slice(0, -1).map((p) => p[0] + '.');
-  return [...abbrevs, last].join(' ');
+
+  switch (mode) {
+    case "full":
+      return name;
+
+    case "compact":
+      return `${parts[0][0]}. ${last}`;
+
+    case "scoreboard":
+      return last;
+
+    default:
+      return name;
+  }
 }
 
 const styles = StyleSheet.create({
@@ -166,19 +180,6 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
   },
   icon: { alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  ballOuter: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ballInner: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
   card: {
     width: 11,
     height: 14,
@@ -193,4 +194,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     transform: [{ rotate: '45deg' }],
   },
+  doubleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  yellowCard: {
+    zIndex: 1,
+  },
+  redCard: {
+    marginLeft: -7,
+    marginTop: -4,
+    zIndex: 10,
+    elevation: 10,
+  }
 });

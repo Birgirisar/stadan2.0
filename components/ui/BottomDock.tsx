@@ -9,7 +9,7 @@ import { useTheme } from '../../lib/theme/useTheme';
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const TABS: Array<{ href: string; label: string; icon: IoniconName }> = [
-  { href: '/', label: 'Leikir', icon: 'aperture-outline' },
+  { href: '/', label: 'Leikir', icon: 'football' },
   { href: '/mot', label: 'Mót', icon: 'trophy-outline' },
   { href: '/frettir', label: 'Fréttir', icon: 'newspaper-outline' },
 ];

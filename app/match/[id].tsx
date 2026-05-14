@@ -12,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme/useTheme';
+import { LEAGUES } from '../../constants/leagues';
 import { useMatchDetail } from '../../lib/hooks/useMatchDetail';
 import { useTeamForm } from '../../lib/hooks/useTeamForm';
 import { useStandings } from '../../lib/hooks/useStandings';
@@ -79,7 +80,6 @@ export default function MatchDetailScreen() {
 
   const { data: fixture, isLoading, error, refetch } = useMatchDetail(id);
   console.log(fixture?.id);
-/*   console.log('Fixture detail:', fixture?.events); */
 
   const home = fixture?.participants?.find((p) => p.meta.location === 'home');
   const away = fixture?.participants?.find((p) => p.meta.location === 'away');
@@ -88,14 +88,15 @@ export default function MatchDetailScreen() {
   const isPending = stateResult?.type === 'pending';
   const isFinished = stateResult?.type === 'finished';
   const venueName = fixture?.venue?.name ?? '';
+  const leagueName = LEAGUES[fixture?.league_id as keyof typeof LEAGUES]?.displayName ?? fixture?.league?.name ?? '';
 
   const seasonId =
     (fixture?.league as any)?.current_season_id ??
     fixture?.season_id ??
     undefined;
 
-  const { data: homeForm, isLoading: homeFormLoading } = useTeamForm(home?.id);
-  const { data: awayForm, isLoading: awayFormLoading } = useTeamForm(away?.id);
+  const { data: homeForm, isLoading: homeFormLoading } = useTeamForm(home?.id, seasonId);
+  const { data: awayForm, isLoading: awayFormLoading } = useTeamForm(away?.id, seasonId);
   const { data: standings } = useStandings(seasonId);
 
   const motm = fixture ? computeMotm(fixture) : null;
@@ -157,6 +158,7 @@ export default function MatchDetailScreen() {
             awayFormLoading={awayFormLoading}
             standings={standings}
             venueName={venueName}
+            leagueName={leagueName}
             colors={colors}
           />
         )}
@@ -196,6 +198,7 @@ interface YfirliProps {
   awayFormLoading: boolean;
   standings: import('../../lib/api/types').Standing[] | undefined;
   venueName: string;
+  leagueName: string;
   colors: ReturnType<typeof import('../../lib/theme/useTheme').useTheme>['colors'];
 }
 
@@ -214,6 +217,7 @@ function YfirliContent({
   awayFormLoading,
   standings,
   venueName,
+  leagueName,
   colors,
 }: YfirliProps) {
   return (
@@ -258,6 +262,7 @@ function YfirliContent({
           awayFixtures={awayForm}
           homeLoading={homeFormLoading}
           awayLoading={awayFormLoading}
+          leagueName={leagueName}
         />
       )}
 
@@ -280,10 +285,9 @@ const styles = StyleSheet.create({
   venueStrip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 5,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingTop: 16,
   },
   venueText: {
     fontFamily: 'Manrope_500Medium',

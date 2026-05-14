@@ -12,6 +12,7 @@ interface Props {
   awayFixtures: Fixture[] | undefined;
   homeLoading: boolean;
   awayLoading: boolean;
+  leagueName?: string;
 }
 
 export function RecentForm({
@@ -21,6 +22,7 @@ export function RecentForm({
   awayFixtures,
   homeLoading,
   awayLoading,
+  leagueName,
 }: Props) {
   const { colors } = useTheme();
 
@@ -32,7 +34,9 @@ export function RecentForm({
   return (
     <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.header}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Form · Síðustu 5</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          {leagueName ? `Síðustu 5 · ${leagueName}` : 'Form · Síðustu 5'}
+        </Text>
       </View>
       <View style={styles.grid}>
         {Array.from({ length: maxRows }, (_, i) => (

@@ -10,6 +10,7 @@ import { formatKickoffTime } from '../../lib/utils/dates';
 import { TeamBadge } from '../fixtures/TeamBadge';
 import { ScorersList } from './ScorersList';
 import { SubTabs, type SubTabId } from './SubTabs';
+import { LEAGUES } from '@/constants/leagues';
 
 export const HERO_SUBTABS_H = 46;
 const COMPACT_CONTENT_H = 52;
@@ -42,12 +43,15 @@ export function HeroCollapsing({
   const home = fixture.participants?.find((p) => p.meta.location === 'home');
   const away = fixture.participants?.find((p) => p.meta.location === 'away');
   const score = getScore(fixture);
+  const hasScorers = (score.home ?? 0) + (score.away ?? 0) > 0;
   const stateResult = getMatchState(fixture.state);
   const isPending = stateResult.type === 'pending';
 
   const leagueName = fixture.league?.name ?? '';
+  const leagueInfo = LEAGUES[fixture.league_id as keyof typeof LEAGUES];
+  const displayLeagueName = leagueInfo?.displayName ?? leagueName;
   const roundName = fixture.round?.name;
-  const leaguePill = [leagueName, roundName ? `Umferð ${roundName}` : ''].filter(Boolean).join(' · ');
+  const leaguePill = [displayLeagueName, roundName ? `Umferð ${roundName}` : ''].filter(Boolean).join(' · ');
 
   const COMPACT_H = insetTop + COMPACT_CONTENT_H + HERO_SUBTABS_H;
 
@@ -238,12 +242,15 @@ export function HeroCollapsing({
         </Animated.View>
 
         {/* Row 3: scorers per team */}
-        {!isPending && fixture.events && (
+        {!isPending && fixture.events && hasScorers && (
           <Animated.View style={[styles.scoreRow3, { opacity: scorersOpacity }]}>
             <View style={styles.scorersCell}>
               {home && <ScorersList events={fixture.events} teamId={home.id} />}
             </View>
-            <View style={styles.scorersSpacer} />
+            {/* <View style={styles.scorersSpacer} /> */}
+            <View style={styles.scorersSpacer}>
+              <Ionicons name="football" size={14} color={colors.textMuted} />
+            </View>
             <View style={styles.scorersCell}>
               {away && <ScorersList events={fixture.events} teamId={away.id} />}
             </View>
@@ -347,6 +354,9 @@ const styles = StyleSheet.create({
   },
   scorersSpacer: {
     width: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 4,
   },
   scoreCenterCell: {
     width: 100,
