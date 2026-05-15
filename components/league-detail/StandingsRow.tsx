@@ -29,12 +29,12 @@ export function StandingsRow({ row, mode, zoneColor, isLive, isLast }: Props) {
   const { colors } = useTheme();
   const team = row.participant;
 
-  const played = getStatRaw(row, 'played', ['played', 'OVERALL_PLAYED', 'overall-played']);
-  const won = getStatRaw(row, 'won', ['won', 'OVERALL_WON', 'overall-won']);
-  const drawn = getStatRaw(row, 'draw', ['draw', 'OVERALL_DRAW', 'overall-draw']);
-  const lost = getStatRaw(row, 'lost', ['lost', 'OVERALL_LOST', 'overall-lost']);
-  const gd = getStatRaw(row, 'goal_difference', ['goal_difference', 'OVERALL_GOAL_DIFFERENCE', 'overall-goal-difference']);
-  const pts = getStatRaw(row, 'points', ['points', 'OVERALL_POINTS', 'overall-points']);
+  const played = getStatRaw(row, 'overall_matches_played', ['overall_matches_played', 'OVERALL_MATCHES_PLAYED', 'overall-matches-played']);
+  const won = getStatRaw(row, 'overall_won', ['overall_won', 'OVERALL_WON', 'overall-won']);
+  const drawn = getStatRaw(row, 'overall_draw', ['overall_draw', 'OVERALL_DRAW', 'overall-draw']);
+  const lost = getStatRaw(row, 'overall_lost', ['overall_lost', 'OVERALL_LOST', 'overall-lost']);
+  const gd = getStatRaw(row, 'overall_goal_difference', ['overall_goal_difference', 'OVERALL_GOAL_DIFFERENCE', 'overall-goal-difference']);
+  const pts = getStatRaw(row, 'overall_points', ['overall_points', 'OVERALL_POINTS', 'overall-points']);
 
   const formLetters = parseForm(row.form);
 

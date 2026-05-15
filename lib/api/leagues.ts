@@ -3,7 +3,7 @@ import type { LeagueFull, StandingRow } from './types';
 
 // Sportmonks type_id → stat key mapping (used when details.type isn't included in response)
 const STAT_TYPE_IDS: Record<string, number[]> = {
-  played: [140],
+  played: [129],
   won: [130],
   draw: [131],
   lost: [132],
