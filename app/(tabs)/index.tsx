@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Animated, PanResponder, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LEAGUES } from '../../constants/leagues';
 import { useFixturesByDate } from '../../lib/api/fixtures';
@@ -58,10 +58,15 @@ export default function LeikirScreen() {
     };
   }, []);
 
+  // True while a touch is active inside any horizontal scroll area — suppresses date-shift swipe
+  const horizontalScrollActive = useRef(false);
+
   const panResponder = useRef(
     PanResponder.create({
-      // Only claim the gesture when horizontal movement clearly dominates
+      // Only claim the gesture when horizontal movement clearly dominates and
+      // the user is NOT swiping on a horizontal scroll area (DaySelector, FilterChips)
       onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+        !horizontalScrollActive.current &&
         Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 12,
       onPanResponderRelease: (_, { dx }) => {
         if (dx < -100) shiftDay.current(1);
@@ -70,7 +75,7 @@ export default function LeikirScreen() {
     })
   ).current;
 
-  const { data: fixtures = [], isLoading, error, refetch } = useFixturesByDate(selectedDate);
+  const { data: fixtures = [], isLoading, isFetching, error, refetch } = useFixturesByDate(selectedDate);
 
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
 
@@ -94,8 +99,23 @@ export default function LeikirScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: insets.bottom + 88 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching}
+            onRefresh={refetch}
+            tintColor={colors.text}
+            colors={[colors.text]}
+            progressViewOffset={headerHeight}
+          />
+        }
       >
-        <FilterChips active={activeFilter} onSelect={setActiveFilter} hasLive={hasLive} />
+        <View
+          onTouchStart={() => { horizontalScrollActive.current = true; }}
+          onTouchEnd={() => { horizontalScrollActive.current = false; }}
+          onTouchCancel={() => { horizontalScrollActive.current = false; }}
+        >
+          <FilterChips active={activeFilter} onSelect={setActiveFilter} hasLive={hasLive} />
+        </View>
 
         {!isLoading && !error && (
           <View style={[styles.sectionRow, { paddingHorizontal: 22 }]}>
@@ -206,11 +226,17 @@ export default function LeikirScreen() {
             </View>
           </View>
 
-          <DaySelector
-            selectedDate={selectedDate}
-            today={today}
-            onSelect={setSelectedDate}
-          />
+          <View
+            onTouchStart={() => { horizontalScrollActive.current = true; }}
+            onTouchEnd={() => { horizontalScrollActive.current = false; }}
+            onTouchCancel={() => { horizontalScrollActive.current = false; }}
+          >
+            <DaySelector
+              selectedDate={selectedDate}
+              today={today}
+              onSelect={setSelectedDate}
+            />
+          </View>
         </BlurView>
 
         <LinearGradient

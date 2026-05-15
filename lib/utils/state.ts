@@ -1,4 +1,4 @@
-import type { FixtureState } from '../api/types';
+import type { FixtureState, Period } from '../api/types';
 
 export type MatchStateResult = {
   type: 'pending' | 'live' | 'halftime' | 'finished' | 'cancelled';
@@ -10,6 +10,13 @@ export type MatchStateResult = {
 const FINAL_CODES = new Set(['FT', 'AET', 'FT_PEN', 'AWARDED', 'WO']);
 const LIVE_CODES = new Set(['1H', '2H', 'ET', 'ET_BREAK', 'PEN_BREAK', 'PEN', 'LIVE']);
 const CANCELLED_CODES = new Set(['POSTP', 'CANC', 'ABANDON', 'SUSP', 'INT']);
+
+export function getLiveMinute(periods: Period[] | undefined): string | null {
+  if (!periods?.length) return null;
+  const active = periods.find((p) => p.ticking === true);
+  if (active != null && active.minutes != null) return `${active.minutes}'`;
+  return null;
+}
 
 export function getMatchState(state: FixtureState | undefined): MatchStateResult {
   if (!state) return { type: 'pending', label: '', showScore: false };

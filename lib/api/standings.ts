@@ -2,7 +2,7 @@ import type { Standing } from './types';
 import { smGet } from './sportmonks';
 
 export async function fetchStandings(seasonId: number): Promise<Standing[]> {
-  const raw = await smGet<unknown[]>(`/standings/season/${seasonId}`, {
+  const raw = await smGet<unknown[]>(`/standings/seasons/${seasonId}`, {
     include: 'participant',
   });
 

@@ -47,6 +47,15 @@ export function formatKickoffTime(isoString: string): string {
   }
 }
 
+export function formatStartDate(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    return `${date.getDate()}. ${MONTHS[date.getMonth()]}`;
+  } catch {
+    return '';
+  }
+}
+
 export function isSameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&

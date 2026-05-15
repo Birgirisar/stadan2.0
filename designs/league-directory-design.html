@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Staðan — Mót</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f4f4f1;
+    --bg-rgb: 244, 244, 241;
+    --surface: #ffffff;
+    --surface-rgb: 255, 255, 255;
+    --surface-elev: #ffffff;
+    --surface-sunken: #ebebe6;
+    --border: #e3e3dc;
+    --border-strong: #d4d4cb;
+    --text: #0e1014;
+    --text-secondary: #5a5d66;
+    --text-muted: #8a8d96;
+    --accent: #0a4d2e;
+    --accent-soft: #d8efe2;
+    --live: #e23838;
+    --gold: #c98a1a;
+    --gold-soft: #f7e9c4;
+    --shadow-lg: 0 12px 40px rgba(14, 16, 20, 0.12);
+    --glass-tab-shadow: 0 12px 32px rgba(14, 16, 20, 0.16), 0 2px 8px rgba(14, 16, 20, 0.08);
+  }
+  [data-theme="dark"] {
+    --bg: #0a0c0f;
+    --bg-rgb: 10, 12, 15;
+    --surface: #14171c;
+    --surface-rgb: 20, 23, 28;
+    --surface-elev: #1a1e24;
+    --surface-sunken: #0e1115;
+    --border: #23282f;
+    --border-strong: #2d333c;
+    --text: #f1f2f4;
+    --text-secondary: #a3a8b2;
+    --text-muted: #6c727c;
+    --accent: #2dd47e;
+    --accent-soft: #0f3325;
+    --live: #ff5c5c;
+    --gold: #e8b04a;
+    --gold-soft: #3a2e10;
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+    --glass-tab-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.3s ease, color 0.3s ease;
+    min-height: 100vh;
+  }
+
+  .preview-stage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    background:
+      radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 50%),
+      radial-gradient(circle at 80% 90%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 50%),
+      var(--bg);
+  }
+
+  .phone {
+    width: 390px;
+    max-width: 100%;
+    height: 844px;
+    max-height: calc(100vh - 64px);
+    background: var(--bg);
+    border-radius: 44px;
+    border: 10px solid #1a1a1a;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  [data-theme="dark"] .phone { border-color: #2a2a2a; }
+
+  .notch {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 28px;
+    background: #1a1a1a;
+    border-radius: 20px;
+    z-index: 100;
+  }
+
+  .status-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 28px 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    z-index: 95;
+    pointer-events: none;
+  }
+  .status-icons { display: flex; gap: 5px; align-items: center; }
+  .status-icons svg { width: 16px; height: 16px; }
+
+  .app {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg);
+    scrollbar-width: none;
+    position: relative;
+  }
+  .app::-webkit-scrollbar { display: none; }
+
+  /* ============ FROSTED HEADER ============ */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    padding: 50px 18px 14px;
+    background: rgba(var(--bg-rgb), 0.78);
+    backdrop-filter: saturate(180%) blur(24px);
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -20px;
+    height: 20px;
+    background: linear-gradient(to bottom, rgba(var(--bg-rgb), 0.5) 0%, rgba(var(--bg-rgb), 0) 100%);
+    pointer-events: none;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .app-title {
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    color: var(--text);
+  }
+  .app-title .dot { color: var(--accent); }
+
+  .header-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(var(--surface-rgb), 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--text);
+    transition: all 0.2s ease;
+  }
+  .icon-btn:hover {
+    background: var(--surface-elev);
+    border-color: var(--border-strong);
+  }
+  .icon-btn:active { transform: scale(0.94); }
+  .icon-btn svg { width: 18px; height: 18px; }
+
+  /* Page-level title (sits below the sticky header) */
+  .page-title {
+    padding: 14px 22px 6px;
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  /* ============ SECTION HEADERS ============ */
+  .section-heading {
+    padding: 16px 22px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-heading h2 {
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ============ LEAGUE CARD ============ */
+  .league-card {
+    margin: 0 14px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 14px 14px 14px 16px;
+    display: grid;
+    grid-template-columns: 44px 1fr 18px;
+    gap: 14px;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .league-card:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-elev);
+    transform: translateY(-1px);
+  }
+  .league-card:active { transform: scale(0.99); }
+
+  /* Live tint on the left edge when league has live matches */
+  .league-card.has-live {
+    border-color: color-mix(in srgb, var(--live) 25%, var(--border));
+  }
+  .league-card.has-live::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    bottom: 14px;
+    width: 3px;
+    background: var(--live);
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* League logo (placeholder uses a styled badge — replace with image in app) */
+  .league-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+  }
+  /* The placeholder visual: Iceland flag inside a rounded square + a small football emblem */
+  .league-logo .flag-bg {
+    position: absolute;
+    inset: 4px;
+    border-radius: 8px;
+    background: linear-gradient(180deg,
+      #02529c 0%, #02529c 33%,
+      #ffffff 33%, #ffffff 38%,
+      #dc1e35 38%, #dc1e35 62%,
+      #ffffff 62%, #ffffff 67%,
+      #02529c 67%);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+  }
+  .league-logo.kvenna .flag-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 60%, rgba(232, 121, 159, 0.4) 100%);
+  }
+
+  .league-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .league-row-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .league-name {
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .league-season {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .league-row-bottom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 22px;
+  }
+  .league-status {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+  }
+
+  /* Leader row */
+  .leader {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex: 1;
+    min-width: 0;
+  }
+  .leader-crest {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    font-family: 'Bricolage Grotesque', serif;
+    font-size: 8px;
+    font-weight: 800;
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+  }
+  [data-theme="dark"] .leader-crest {
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .leader-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .leader-points {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  /* Champion (finished season) row */
+  .leader.champion .leader-crest {
+    box-shadow: 0 0 0 2px var(--gold), inset 0 0 0 1px rgba(0,0,0,0.08);
+  }
+  .leader.champion .leader-name {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .champion-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px 2px 5px;
+    background: var(--gold-soft);
+    color: var(--gold);
+    border-radius: 6px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .champion-badge svg { width: 9px; height: 9px; fill: currentColor; }
+
+  /* Live indicator pill */
+  .live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px 2px 7px;
+    background: var(--live);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .live-pill::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #fff;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Pre-season banner */
+  .upcoming-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .upcoming-meta svg { width: 12px; height: 12px; color: var(--text-muted); }
+
+  .chevron {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .chevron svg { width: 18px; height: 18px; }
+
+  /* Empty state for followed section */
+  .empty-followed {
+    margin: 0 14px 8px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px dashed var(--border-strong);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .empty-followed-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--surface-sunken);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+  .empty-followed-icon svg { width: 18px; height: 18px; }
+  .empty-followed-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .empty-followed-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .empty-followed-sub {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    line-height: 1.35;
+  }
+
+  /* Followed example (when user has followed) — using same league card, slightly tinted */
+  .league-card.followed::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    right: 30px;
+    width: 12px;
+    height: 12px;
+    background: var(--gold);
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><polygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2' /></svg>") center/contain no-repeat;
+    mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><polygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2' /></svg>") center/contain no-repeat;
+  }
+
+  /* Bottom dock */
+  .bottom-dock {
+    position: absolute;
+    bottom: 18px;
+    left: 14px;
+    right: 14px;
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    z-index: 70;
+    pointer-events: none;
+  }
+  .bottom-dock > * { pointer-events: auto; }
+  .tabbar {
+    flex: 1;
+    background: rgba(var(--surface-rgb), 0.65);
+    backdrop-filter: saturate(180%) blur(28px);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 6px 4px;
+    box-shadow: var(--glass-tab-shadow);
+  }
+  [data-theme="light"] .tabbar { background: rgba(255, 255, 255, 0.7); }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+    border-radius: 18px;
+  }
+  .tab svg { width: 22px; height: 22px; }
+  .tab span { font-size: 10px; font-weight: 600; letter-spacing: 0.01em; }
+  .tab.active { color: var(--text); }
+  .tab.active svg { color: var(--accent); }
+  .search-pill {
+    width: 58px;
+    background: rgba(var(--surface-rgb), 0.65);
+    backdrop-filter: saturate(180%) blur(28px);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--text);
+    box-shadow: var(--glass-tab-shadow);
+  }
+  [data-theme="light"] .search-pill { background: rgba(255, 255, 255, 0.7); }
+  .search-pill svg { width: 22px; height: 22px; }
+
+  /* Team crest colors */
+  .c-valur { background: linear-gradient(135deg, #d61f3a 0%, #a8121f 100%); }
+  .c-kr { background: linear-gradient(135deg, #2a2a2a 0%, #000 100%); }
+  .c-vik { background: linear-gradient(135deg, #c8102e 50%, #000 50%); }
+  .c-blik { background: #1b8c3f; }
+  .c-stjarnan { background: linear-gradient(135deg, #f5c518 50%, #003d7a 50%); }
+
+  /* State-toggle controls at the bottom of the screen (DEMO ONLY — for previewing variants) */
+  .demo-controls {
+    margin: 18px 14px 0;
+    padding: 12px 14px;
+    background: var(--surface-sunken);
+    border-radius: 14px;
+    border: 1px dashed var(--border-strong);
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .demo-controls strong { color: var(--text-secondary); font-weight: 700; }
+  .demo-controls .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .demo-btn {
+    padding: 4px 9px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .demo-btn.active {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.92); }
+  }
+
+  .scroll-tail { height: 110px; }
+
+  @media (max-width: 440px) {
+    .preview-stage { padding: 0; }
+    .phone {
+      width: 100%;
+      height: 100vh;
+      max-height: 100vh;
+      border-radius: 0;
+      border: none;
+    }
+    .notch { display: none; }
+  }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="preview-stage">
+
+  <div class="phone">
+    <div class="notch"></div>
+
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+      </div>
+    </div>
+
+    <div class="app">
+
+      <!-- Frosted header -->
+      <div class="header">
+        <div class="header-top">
+          <div class="app-title">Staðan<span class="dot">.</span></div>
+          <div class="header-actions">
+            <button class="icon-btn" id="themeToggle" title="Þema">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </button>
+            <button class="icon-btn" title="Stillingar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page title -->
+      <div class="page-title">Mót</div>
+
+      <!-- ============ FOLLOWED SECTION ============ -->
+      <div class="section-heading">
+        <h2>Þú fylgist með</h2>
+      </div>
+
+      <!-- Empty state — shown when user follows nothing -->
+      <div class="empty-followed" id="emptyFollowed">
+        <div class="empty-followed-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        </div>
+        <div class="empty-followed-text">
+          <div class="empty-followed-title">Engar deildir ennþá</div>
+          <div class="empty-followed-sub">Smelltu á „Fylgjast" í deildarsíðu til að bæta hér við.</div>
+        </div>
+      </div>
+
+      <!-- Example "followed" card — hidden by default, toggled via demo control -->
+      <div class="league-card has-live followed" id="followedExample" style="display: none;">
+        <div class="league-logo"><div class="flag-bg"></div></div>
+        <div class="league-info">
+          <div class="league-row-top">
+            <div class="league-name">Besta deild karla</div>
+            <div class="league-season">2025</div>
+          </div>
+          <div class="league-row-bottom">
+            <div class="leader">
+              <div class="leader-crest c-vik">VÍK</div>
+              <div class="leader-name">Víkingur R.</div>
+              <div class="leader-points">12 stig</div>
+            </div>
+            <div class="live-pill">3 LIVE</div>
+          </div>
+        </div>
+        <div class="chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+
+      <!-- ============ ALL LEAGUES SECTION ============ -->
+      <div class="section-heading">
+        <h2>Allar deildir</h2>
+      </div>
+
+      <!-- 1: Besta deild karla — active season with live matches -->
+      <div class="league-card has-live">
+        <div class="league-logo"><div class="flag-bg"></div></div>
+        <div class="league-info">
+          <div class="league-row-top">
+            <div class="league-name">Besta deild karla</div>
+            <div class="league-season">2025</div>
+          </div>
+          <div class="league-row-bottom">
+            <div class="leader">
+              <div class="leader-crest c-vik">VÍK</div>
+              <div class="leader-name">Víkingur R.</div>
+              <div class="leader-points">12 stig</div>
+            </div>
+            <div class="live-pill">3 LIVE</div>
+          </div>
+          <div class="league-status">Umferð 4 af 22</div>
+        </div>
+        <div class="chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+
+      <!-- 2: Lengjudeild karla — active, no live right now -->
+      <div class="league-card">
+        <div class="league-logo"><div class="flag-bg"></div></div>
+        <div class="league-info">
+          <div class="league-row-top">
+            <div class="league-name">Lengjudeild karla</div>
+            <div class="league-season">2025</div>
+          </div>
+          <div class="league-row-bottom">
+            <div class="leader">
+              <div class="leader-crest c-blik">BRE</div>
+              <div class="leader-name">Breiðablik 2</div>
+              <div class="leader-points">10 stig</div>
+            </div>
+          </div>
+          <div class="league-status">Umferð 4 af 22</div>
+        </div>
+        <div class="chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+
+      <!-- 3: 2. deild karla — pre-season (upcoming) -->
+      <div class="league-card">
+        <div class="league-logo"><div class="flag-bg"></div></div>
+        <div class="league-info">
+          <div class="league-row-top">
+            <div class="league-name">2. deild karla</div>
+            <div class="league-season">2025</div>
+          </div>
+          <div class="league-row-bottom">
+            <div class="upcoming-meta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Hefst 12. apríl
+            </div>
+          </div>
+        </div>
+        <div class="chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+
+      <!-- 4: Besta deild kvenna — active -->
+      <div class="league-card">
+        <div class="league-logo kvenna"><div class="flag-bg"></div></div>
+        <div class="league-info">
+          <div class="league-row-top">
+            <div class="league-name">Besta deild kvenna</div>
+            <div class="league-season">2025</div>
+          </div>
+          <div class="league-row-bottom">
+            <div class="leader">
+              <div class="leader-crest c-valur">VAL</div>
+              <div class="leader-name">Valur</div>
+              <div class="leader-points">9 stig</div>
+            </div>
+          </div>
+          <div class="league-status">Umferð 3 af 18</div>
+        </div>
+        <div class="chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+
+      <!-- 5: Lengjudeild kvenna — finished season with champion -->
+      <div class="league-card">
+        <div class="league-logo kvenna"><div class="flag-bg"></div></div>
+        <div class="league-info">
+          <div class="league-row-top">
+            <div class="league-name">Lengjudeild kvenna</div>
+            <div class="league-season">2024</div>
+          </div>
+          <div class="league-row-bottom">
+            <div class="leader champion">
+              <div class="leader-crest c-stjarnan">STJ</div>
+              <div class="leader-name">Stjarnan</div>
+            </div>
+            <div class="champion-badge">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 2v2h14v-2H5z"/></svg>
+              Meistari
+            </div>
+          </div>
+          <div class="league-status">Lokið · Sigurvegari 2024</div>
+        </div>
+        <div class="chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+
+      <!-- ============ DEMO CONTROLS (not part of the actual screen) ============ -->
+      <div class="demo-controls">
+        <strong>Forskoðun:</strong>
+        <div class="row">
+          <button class="demo-btn active" id="demoEmpty">Engar fylgst með (tóm staða)</button>
+          <button class="demo-btn" id="demoFollowed">Notandi fylgist með 1 deild</button>
+        </div>
+      </div>
+
+      <div class="scroll-tail"></div>
+
+    </div>
+
+    <!-- Bottom dock — Mót tab is active -->
+    <div class="bottom-dock">
+      <div class="tabbar">
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg>
+          <span>Leikir</span>
+        </div>
+        <div class="tab active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+          <span>Mót</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8"></path><path d="M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg>
+          <span>Fréttir</span>
+        </div>
+      </div>
+      <button class="search-pill" title="Leita">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path>
+        </svg>
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  // Theme toggle
+  const root = document.body;
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon = document.getElementById('themeIcon');
+  const sunIcon = `<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>`;
+  const moonIcon = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>`;
+  themeToggle.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    themeIcon.innerHTML = next === 'dark' ? moonIcon : sunIcon;
+  });
+
+  // Demo state toggles
+  const emptyFollowed = document.getElementById('emptyFollowed');
+  const followedExample = document.getElementById('followedExample');
+  const demoEmpty = document.getElementById('demoEmpty');
+  const demoFollowed = document.getElementById('demoFollowed');
+
+  demoEmpty.addEventListener('click', () => {
+    emptyFollowed.style.display = 'flex';
+    followedExample.style.display = 'none';
+    demoEmpty.classList.add('active');
+    demoFollowed.classList.remove('active');
+  });
+  demoFollowed.addEventListener('click', () => {
+    emptyFollowed.style.display = 'none';
+    followedExample.style.display = 'grid';
+    demoEmpty.classList.remove('active');
+    demoFollowed.classList.add('active');
+  });
+</script>
+
+</body>
+</html>

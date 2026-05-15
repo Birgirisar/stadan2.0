@@ -66,7 +66,7 @@ constants/
 
 ## Match detail — Sportmonks quirks
 
-- **standings**: `/standings/season/{seasonId}` returns an array of stage objects. Each stage has `standings.data` (an array of team rows). The parser in `lib/api/standings.ts` flattens all stages. If the competition has no standings (cup/friendly), the array is empty and `MiniLeagueTable` hides itself.
+- **standings**: `/standings/seasons/{seasonId}` returns an array of stage objects. Each stage has `standings.data` (an array of team rows). The parser in `lib/api/standings.ts` flattens all stages. If the competition has no standings (cup/friendly), the array is empty and `MiniLeagueTable` hides itself.
 - **events include**: Use `events.relatedPlayer` (camelCase) in the `include` param; the response field is `related_player` (snake_case).
 - **MOTM**: Icelandic league fixtures do not consistently have `meta.man_of_the_match`. The fallback uses the highest `rating` value across all lineup entries. If no ratings exist, the `ManOfTheMatchCard` is hidden entirely.
 - **team form**: `fixtureStates:5` filters to finished matches (state id 5 = FT). The `/fixtures/between` endpoint returns up to 10 results; we take the 5 most recent.

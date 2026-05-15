@@ -55,6 +55,7 @@ export interface Fixture {
   state?: FixtureState;
   league?: League;
   round?: Round;
+  periods?: Period[];
 }
 
 export interface SportmonksResponse<T> {
@@ -124,6 +125,9 @@ export interface Period {
   ended?: number | null;
   sort_order: number;
   type_code?: string;
+  ticking?: boolean;
+  minutes?: number | null;
+  seconds_elapsed?: number | null;
 }
 
 export interface StatisticEntry {
@@ -147,7 +151,74 @@ export interface Standing {
   goal_difference?: number;
   points?: number;
   // Sportmonks v3 sometimes nests stats under `details`
-  details?: Array<{ type_id: number; value: number }>;
+  details?: Array<{
+    type_id: number;
+    value: number;
+    type?: { id: number; name: string; code: string; developer_name?: string };
+  }>;
+}
+
+export interface Season {
+  id: number;
+  league_id: number;
+  name: string;
+  starting_at?: string;
+  ending_at?: string;
+  is_current?: boolean;
+  finished?: boolean;
+}
+
+export interface LeagueFull {
+  id: number;
+  name: string;
+  image_path: string;
+  current_season_id?: number;
+  currentSeason?: Season;
+  currentseason?: Season; // API returns lowercase "currentseason"
+  seasons?: Season[];
+}
+
+export interface StandingRule {
+  id?: number;
+  name?: string;
+  type?: string;
+}
+
+export interface StandingRow {
+  position: number;
+  participant_id?: number;
+  team_id?: number;
+  participant?: {
+    id: number;
+    name: string;
+    short_code?: string;
+    image_path?: string;
+  };
+  details?: Array<{
+    type_id: number;
+    value: number;
+    type?: { id: number; name: string; code: string; developer_name?: string };
+  }>;
+  // form can be an array of recent results or a raw string like "WWDLW"
+  // API returns objects with either `result` or `form` field, plus `sort_order`
+  form?: Array<{ result?: string; form?: string; fixture_id?: number; sort_order?: number }> | string;
+  rule?: StandingRule | null;
+  rule_id?: number;
+}
+
+export interface LeagueSummary {
+  leagueId: number;
+  name: string;
+  imagePath: string;
+  isWomens: boolean;
+  currentSeasonId: number | null;
+  currentSeasonYear: string;
+  seasonState: 'active' | 'upcoming' | 'finished';
+  startingAt: string | null;
+  leader: { name: string; shortCode: string; imagePath: string; points: number } | null;
+  champion: { name: string; shortCode: string; imagePath: string } | null;
+  liveCount: number;
+  seasons: Season[];
 }
 
 export interface DetailedFixture extends Fixture {

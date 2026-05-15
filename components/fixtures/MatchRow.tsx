@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '../../lib/theme/useTheme';
 import { formatKickoffTime } from '../../lib/utils/dates';
 import { getScore } from '../../lib/utils/score';
-import { getMatchState } from '../../lib/utils/state';
+import { getMatchState, getLiveMinute } from '../../lib/utils/state';
 import type { Fixture } from '../../lib/api/types';
 import { TeamBadge } from './TeamBadge';
 
@@ -42,6 +42,7 @@ export function MatchRow({ fixture, isLast }: Props) {
   const away = fixture.participants?.find((p) => p.meta.location === 'away');
   const stateResult = getMatchState(fixture.state);
   const score = getScore(fixture);
+  const liveMinute = getLiveMinute(fixture.periods);
 
   const homeIsLoser = false;
   const awayIsLoser = false;
@@ -59,7 +60,14 @@ export function MatchRow({ fixture, isLast }: Props) {
       {/* Status — 40px */}
       <View style={styles.statusCol}>
         {stateResult.type === 'live' ? (
-          <PulseDot color={colors.live} />
+          liveMinute ? (
+            <View style={styles.liveMinuteRow}>
+              <PulseDot color={colors.live} />
+              <Text style={[styles.minuteText, { color: colors.live }]}>{liveMinute}</Text>
+            </View>
+          ) : (
+            <PulseDot color={colors.live} />
+          )
         ) : stateResult.label ? (
           <Text
             style={[
@@ -182,6 +190,16 @@ const styles = StyleSheet.create({
     width: 54,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  liveMinuteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  minuteText: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+    letterSpacing: 0.2,
   },
   score: {
     fontFamily: 'JetBrainsMono_700Bold',

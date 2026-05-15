@@ -5,7 +5,7 @@ import { Animated, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from '
 import type { DetailedFixture } from '../../lib/api/types';
 import { useTheme } from '../../lib/theme/useTheme';
 import { getScore } from '../../lib/utils/score';
-import { getMatchState } from '../../lib/utils/state';
+import { getMatchState, getLiveMinute } from '../../lib/utils/state';
 import { formatKickoffTime } from '../../lib/utils/dates';
 import { TeamBadge } from '../fixtures/TeamBadge';
 import { ScorersList } from './ScorersList';
@@ -46,6 +46,7 @@ export function HeroCollapsing({
   const hasScorers = (score.home ?? 0) + (score.away ?? 0) > 0;
   const stateResult = getMatchState(fixture.state);
   const isPending = stateResult.type === 'pending';
+  const liveMinute = getLiveMinute(fixture.periods);
 
   const leagueName = fixture.league?.name ?? '';
   const leagueInfo = LEAGUES[fixture.league_id as keyof typeof LEAGUES];
@@ -113,7 +114,7 @@ export function HeroCollapsing({
   const statusLabel =
     stateResult.type === 'finished' ? 'Leik lokið' :
     stateResult.type === 'halftime' ? 'Hálfleikur' :
-    stateResult.type === 'live' ? (fixture.state?.short_name ?? 'LIVE') :
+    stateResult.type === 'live' ? (liveMinute ?? fixture.state?.short_name ?? 'LIVE') :
     stateResult.type === 'cancelled'
       ? (fixture.state?.state === 'POSTP' ? 'Frestað' : 'Aflýst')
       : '';
@@ -131,12 +132,13 @@ export function HeroCollapsing({
 
   return (
     <Animated.View style={[styles.hero, { height: heroHeight, backgroundColor: colors.surface }]}>
-      {/* Opaque gradient tint */}
+      {/* Background gradient — must stay first child so it renders behind everything */}
       <LinearGradient
         colors={[gradStart, gradEnd]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
+        pointerEvents="none"
       />
 
       {/* League pill — centered between the fixed buttons, fades out */}

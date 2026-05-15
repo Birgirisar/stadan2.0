@@ -4,7 +4,7 @@ import type { Fixture } from './types';
 import { smGet } from './sportmonks';
 
 const LEAGUE_FILTER = '345,348,351,1710,1711';
-const INCLUDE = 'participants;scores;state;league;round';
+const INCLUDE = 'participants;scores;state;league;round;periods';
 
 async function fetchFixturesByDate(dateStr: string): Promise<Fixture[]> {
   const result = await smGet<Fixture[]>(`/fixtures/date/${dateStr}`, {
