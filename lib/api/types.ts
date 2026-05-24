@@ -82,6 +82,8 @@ export interface Player {
   firstname?: string;
   lastname?: string;
   position_id?: number;
+  display_name?: string;
+  image_path?: string;
 }
 
 export interface EventType {
@@ -108,6 +110,37 @@ export interface FixtureEvent {
   type?: EventType | null;
 }
 
+export interface LineupDetail {
+  id: number;
+  type_id: number;
+  value?: number | string | null;
+  type?: { id: number; name: string; code?: string; developer_name?: string };
+}
+
+// Coach objects returned directly in fixture.coaches[].
+// Team is identified via meta.participant_id (not a top-level team_id).
+export interface Coach {
+  id: number;
+  firstname?: string;
+  lastname?: string;
+  name?: string;
+  common_name?: string;
+  display_name?: string;
+  image_path?: string;
+  meta?: {
+    fixture_id?: number;
+    coach_id?: number;
+    participant_id?: number; // team ID
+  };
+}
+
+export interface Formation {
+  id: number;
+  fixture_id?: number;
+  team_id: number;
+  formation: string;
+}
+
 export interface LineupEntry {
   id: number;
   player_id: number;
@@ -116,6 +149,13 @@ export interface LineupEntry {
   jersey_number?: number | null;
   rating?: number | null;
   player?: Player | null;
+  player_name?: string | null;
+  type_id?: number;
+  formation_field?: string | null;
+  formation_position?: number | null;
+  captain?: boolean;
+  position_id?: number | null;
+  details?: LineupDetail[];
 }
 
 export interface Period {
@@ -231,4 +271,7 @@ export interface DetailedFixture extends Fixture {
   statistics?: StatisticEntry[];
   meta?: Record<string, unknown>;
   league?: League & { current_season_id?: number };
+  formations?: Formation[];
+  coaches?: Coach[];
+  expectedLineups?: LineupEntry[];
 }

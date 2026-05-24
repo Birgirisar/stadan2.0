@@ -12,7 +12,7 @@ interface Props {
 
 function GoalIcon({ color }: { color: string }) {
   return (
-    <Ionicons style={[styles.icon]} name="football-outline" size={14} color={color} />  
+    <Ionicons style={[styles.icon]} name="football" size={14} color={color} />  
   );
 }
 

@@ -12,6 +12,9 @@ const INCLUDE = [
   'events.relatedPlayer',
   'events.type',
   'lineups.player',
+  'lineups.details.type',
+  'coaches',
+  'formations',
   'periods',
   'statistics.type',
 ].join(';');

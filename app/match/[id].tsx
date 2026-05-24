@@ -25,6 +25,7 @@ import { ManOfTheMatchCard } from '../../components/match-detail/ManOfTheMatchCa
 import { RecentForm } from '../../components/match-detail/RecentForm';
 import { MiniLeagueTable } from '../../components/match-detail/MiniLeagueTable';
 import { PlaceholderTab } from '../../components/match-detail/PlaceholderTab';
+import { LineupTab } from '../../components/match-detail/lineup/LineupTab';
 
 // Estimated hero base height before measurement (without insets.top), includes subtabs
 const HERO_BASE_ESTIMATE = 246;
@@ -162,7 +163,10 @@ export default function MatchDetailScreen() {
             colors={colors}
           />
         )}
-        {activeTab !== 'yfirlit' && <PlaceholderTab />}
+        {activeTab === 'lidin' && (
+          <LineupTab fixture={fixture} />
+        )}
+        {activeTab !== 'yfirlit' && activeTab !== 'lidin' && <PlaceholderTab />}
       </Animated.ScrollView>
 
       {/* Animated hero overlay — subtabs and controls are all inside */}

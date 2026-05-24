@@ -7,11 +7,25 @@ const client = axios.create({
 });
 
 export async function smGet<T>(path: string, params: Record<string, string> = {}): Promise<T> {
-  const res = await client.get<SportmonksResponse<T>>(path, {
-    params: {
-      api_token: process.env.EXPO_PUBLIC_SPORTMONKS_KEY,
-      ...params,
-    },
-  });
-  return res.data.data;
+  const { api_token: _, ...logParams } = {
+    api_token: process.env.EXPO_PUBLIC_SPORTMONKS_KEY,
+    ...params,
+  };
+  console.log('[smGet]', path, logParams);
+  try {
+    const res = await client.get<SportmonksResponse<T>>(path, {
+      params: {
+        api_token: process.env.EXPO_PUBLIC_SPORTMONKS_KEY,
+        ...params,
+      },
+    });
+    console.log('[smGet] OK', path, 'status:', res.status, 'hasData:', res.data?.data != null);
+    return res.data.data;
+  } catch (err: any) {
+    console.error('[smGet] ERROR', path);
+    console.error('  status:', err?.response?.status);
+    console.error('  message:', err?.message);
+    console.error('  body:', JSON.stringify(err?.response?.data)?.slice(0, 500));
+    throw err;
+  }
 }
