@@ -10,6 +10,7 @@ import { formatKickoffTime } from '../../lib/utils/dates';
 import { TeamBadge } from '../fixtures/TeamBadge';
 import { ScorersList } from './ScorersList';
 import { SubTabs, type SubTabId } from './SubTabs';
+import { getAvailableSubTabs } from '../../lib/utils/matchSubTabs';
 import { LEAGUES } from '@/constants/leagues';
 
 export const HERO_SUBTABS_H = 46;
@@ -264,7 +265,11 @@ export function HeroCollapsing({
 
       {/* SubTabs — pinned to the bottom of the hero at all scroll positions */}
       <View style={styles.subTabsAnchor}>
-        <SubTabs activeTab={activeTab} onTabChange={onTabChange} isPending={isPending} />
+        <SubTabs
+          activeTab={activeTab}
+          onTabChange={onTabChange}
+          tabs={getAvailableSubTabs(fixture)}
+        />
       </View>
 
       {/* Fixed back button — always anchored top-left */}

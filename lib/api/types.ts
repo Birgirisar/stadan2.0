@@ -261,6 +261,17 @@ export interface LeagueSummary {
   seasons: Season[];
 }
 
+export interface CommentaryEntry {
+  id: number;
+  fixture_id: number;
+  comment: string;
+  minute: number | null;
+  extra_minute: number | null;
+  is_goal: boolean;
+  is_important: boolean;
+  order: number;
+}
+
 export interface DetailedFixture extends Fixture {
   season_id?: number;
   venue_id?: number;

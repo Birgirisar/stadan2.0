@@ -11,6 +11,8 @@ interface Props {
   mode: 'tafla' | 'form';
   leagueId: number;
   liveTeamIds: Set<number>;
+  /** Team IDs to highlight with accent-soft background (0–2 values; match detail use) */
+  highlightTeamIds?: number[];
 }
 
 function getZoneColor(
@@ -41,7 +43,8 @@ function getTeamId(row: StandingRow): number {
   return row.participant_id ?? row.team_id ?? row.participant?.id ?? 0;
 }
 
-export function StandingsTable({ rows, mode, leagueId, liveTeamIds }: Props) {
+export function StandingsTable({ rows, mode, leagueId, liveTeamIds, highlightTeamIds }: Props) {
+  const highlightSet = highlightTeamIds ? new Set(highlightTeamIds) : null;
   const { colors } = useTheme();
 
   const hasPromotionZone = rows.some((r) => getZoneColor(leagueId, r) === 'promotion');
@@ -90,6 +93,7 @@ export function StandingsTable({ rows, mode, leagueId, liveTeamIds }: Props) {
               zoneColor={zoneColor}
               isLive={liveTeamIds.has(teamId)}
               isLast={idx === rows.length - 1}
+              isHighlighted={highlightSet?.has(teamId) ?? false}
             />
           );
         })}

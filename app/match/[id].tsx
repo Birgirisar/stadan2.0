@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -18,6 +18,7 @@ import { useTeamForm } from '../../lib/hooks/useTeamForm';
 import { useStandings } from '../../lib/hooks/useStandings';
 import { getScore } from '../../lib/utils/score';
 import { getMatchState } from '../../lib/utils/state';
+import { getAvailableSubTabs } from '../../lib/utils/matchSubTabs';
 import { HeroCollapsing, HERO_SUBTABS_H } from '../../components/match-detail/HeroCollapsing';
 import { type SubTabId } from '../../components/match-detail/SubTabs';
 import { EventTimeline } from '../../components/match-detail/EventTimeline';
@@ -26,6 +27,8 @@ import { RecentForm } from '../../components/match-detail/RecentForm';
 import { MiniLeagueTable } from '../../components/match-detail/MiniLeagueTable';
 import { PlaceholderTab } from '../../components/match-detail/PlaceholderTab';
 import { LineupTab } from '../../components/match-detail/lineup/LineupTab';
+import { CommentaryTab } from '../../components/match-detail/commentary/CommentaryTab';
+import { TaflaTab } from '../../components/match-detail/TaflaTab';
 
 // Estimated hero base height before measurement (without insets.top), includes subtabs
 const HERO_BASE_ESTIMATE = 246;
@@ -72,6 +75,9 @@ export default function MatchDetailScreen() {
   const { height: screenHeight } = useWindowDimensions();
 
   const scrollY = useRef(new Animated.Value(0)).current;
+  // ScrollView is the correct ref type — Animated.ScrollView wraps it and
+  // proxies scrollTo / getScrollableNode at runtime.
+  const scrollViewRef = useRef<import('react-native').ScrollView>(null);
   const [activeTab, setActiveTab] = useState<SubTabId>('yfirlit');
 
   // Dynamic hero height — starts with an estimate, updated after onLayout fires
@@ -101,6 +107,16 @@ export default function MatchDetailScreen() {
   const { data: standings } = useStandings(seasonId);
 
   const motm = fixture ? computeMotm(fixture) : null;
+
+  // If the active tab is no longer in the available list (e.g. fixture state
+  // changed), fall back to Yfirlit.
+  useEffect(() => {
+    if (!fixture) return;
+    const available = getAvailableSubTabs(fixture);
+    if (!available.find((t) => t.id === activeTab)) {
+      setActiveTab('yfirlit');
+    }
+  }, [fixture]);
 
   const scrollHandler = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -135,6 +151,7 @@ export default function MatchDetailScreen() {
     <View style={[styles.screen, { backgroundColor: colors.bg }]}>
       {/* Scrollable content */}
       <Animated.ScrollView
+        ref={scrollViewRef}
         onScroll={scrollHandler}
         scrollEventThrottle={1}
         contentContainerStyle={[
@@ -166,7 +183,30 @@ export default function MatchDetailScreen() {
         {activeTab === 'lidin' && (
           <LineupTab fixture={fixture} />
         )}
-        {activeTab !== 'yfirlit' && activeTab !== 'lidin' && <PlaceholderTab />}
+        {activeTab === 'lysing' && (
+          <CommentaryTab
+            fixtureId={fixture.id}
+            isLive={stateResult?.type === 'live' || stateResult?.type === 'halftime'}
+          />
+        )}
+        {activeTab === 'tafla' && (
+          <TaflaTab
+            seasonId={seasonId}
+            leagueId={fixture.league_id}
+            homeTeamId={home?.id}
+            awayTeamId={away?.id}
+            liveTeamIds={new Set<number>()}
+            scrollRef={scrollViewRef}
+            heroFull={heroFull}
+            heroCollapsedH={HERO_COLLAPSED}
+          />
+        )}
+        {activeTab !== 'yfirlit' &&
+          activeTab !== 'lidin' &&
+          activeTab !== 'lysing' &&
+          activeTab !== 'tafla' && (
+          <PlaceholderTab />
+        )}
       </Animated.ScrollView>
 
       {/* Animated hero overlay — subtabs and controls are all inside */}

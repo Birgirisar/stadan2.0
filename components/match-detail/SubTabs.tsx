@@ -1,15 +1,13 @@
 import React, { useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../lib/theme/useTheme';
+import type { SubTabId, SubTabDef } from '../../lib/utils/matchSubTabs';
 
-export type SubTabId = 'yfirlit' | 'lysing' | 'lidin' | 'tafla' | 'tolfraedi' | 'innbyrðis';
+// Re-export so existing imports of SubTabId from this file continue to work.
+export type { SubTabId } from '../../lib/utils/matchSubTabs';
 
-interface TabDef {
-  id: SubTabId;
-  label: string;
-}
-
-const ALL_TABS: TabDef[] = [
+// Fallback full list used when no explicit `tabs` prop is provided.
+const ALL_TABS: SubTabDef[] = [
   { id: 'yfirlit', label: 'Yfirlit' },
   { id: 'lysing', label: 'Lýsing' },
   { id: 'lidin', label: 'Liðin' },
@@ -18,27 +16,37 @@ const ALL_TABS: TabDef[] = [
   { id: 'innbyrðis', label: 'Innbyrðis' },
 ];
 
-const PENDING_TABS: SubTabId[] = ['yfirlit', 'lidin', 'tafla', 'innbyrðis'];
+const PENDING_TAB_IDS: SubTabId[] = ['yfirlit', 'lidin', 'tafla', 'innbyrðis'];
 
 interface Props {
   activeTab: SubTabId;
   onTabChange: (tab: SubTabId) => void;
+  /**
+   * Explicit ordered tab list. When supplied this takes full precedence and
+   * `isPending` is ignored. Pass the result of `getAvailableSubTabs(fixture)`.
+   */
+  tabs?: SubTabDef[];
+  /** Legacy prop — used as fallback when `tabs` is not provided. */
   isPending?: boolean;
 }
 
-export function SubTabs({ activeTab, onTabChange, isPending = false }: Props) {
+export function SubTabs({ activeTab, onTabChange, tabs, isPending = false }: Props) {
   const { colors } = useTheme();
-  const tabs = isPending ? ALL_TABS.filter((t) => PENDING_TABS.includes(t.id)) : ALL_TABS;
+  const displayTabs = tabs ?? (isPending
+    ? ALL_TABS.filter((t) => PENDING_TAB_IDS.includes(t.id))
+    : ALL_TABS);
+  const scrollRef = useRef<ScrollView>(null);
 
   return (
     <View style={[styles.wrapper, { backgroundColor: colors.bg, borderColor: colors.border }]}>
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         bounces={false}
       >
-        {tabs.map((tab) => {
+        {displayTabs.map((tab) => {
           const active = tab.id === activeTab;
           return (
             <TouchableOpacity

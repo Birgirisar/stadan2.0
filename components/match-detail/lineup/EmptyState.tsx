@@ -10,7 +10,7 @@ export function EmptyState() {
       <View style={[styles.iconWrap, { backgroundColor: colors.surfaceSunken }]}>
         <Ionicons name="people-outline" size={22} color={colors.textMuted} />
       </View>
-      <Text style={[styles.title, { color: colors.text }]}>Liðin ekki tilkynnt enn</Text>
+      <Text style={[styles.title, { color: colors.text }]}>Liðin ekki tiltæk</Text>
       <Text style={[styles.sub, { color: colors.textMuted }]}>
         Staðfest lið birtast um klukkutíma fyrir leik.
       </Text>

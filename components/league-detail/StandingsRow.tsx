@@ -11,6 +11,8 @@ interface Props {
   zoneColor?: 'promotion' | 'relegation' | null;
   isLive?: boolean;
   isLast?: boolean;
+  /** Highlight this row with accent-soft background (used by match detail Tafla) */
+  isHighlighted?: boolean;
 }
 
 // Try a direct numeric field on the raw row object before falling back to details[]
@@ -25,7 +27,7 @@ function gdStr(n: number): string {
   return `${n}`;
 }
 
-export function StandingsRow({ row, mode, zoneColor, isLive, isLast }: Props) {
+export function StandingsRow({ row, mode, zoneColor, isLive, isLast, isHighlighted }: Props) {
   const { colors } = useTheme();
   const team = row.participant;
 
@@ -46,6 +48,7 @@ export function StandingsRow({ row, mode, zoneColor, isLive, isLast }: Props) {
           borderBottomColor: colors.border,
           borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
         },
+        isHighlighted && { backgroundColor: colors.accentSoft },
       ]}
     >
       {/* Zone stripe */}
@@ -70,7 +73,10 @@ export function StandingsRow({ row, mode, zoneColor, isLive, isLast }: Props) {
 
       {/* Team name + live dot */}
       <View style={styles.teamCell}>
-        <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={1}>
+        <Text
+          style={[styles.teamName, { color: colors.text }, isHighlighted && styles.teamNameHighlight]}
+          numberOfLines={1}
+        >
           {team?.name ?? '—'}
         </Text>
         {isLive && (
@@ -150,6 +156,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope_600SemiBold',
     fontSize: 12.5,
     flexShrink: 1,
+  },
+  teamNameHighlight: {
+    fontFamily: 'Manrope_700Bold',
   },
   liveDot: {
     width: 6,
