@@ -14,6 +14,17 @@ async function fetchFixturesByDate(dateStr: string): Promise<Fixture[]> {
   });
   const fixtures = Array.isArray(result) ? result : [];
 
+  // Debug: log state fields so we can verify live detection works correctly
+  for (const f of fixtures) {
+    if (f.state) {
+      console.log(
+        `[fixtures] id=${f.id} state.state="${f.state.state}" is_live=${f.state.is_live} ` +
+        `is_pending=${f.state.is_pending} short_name="${f.state.short_name}" ` +
+        `periods=${f.periods?.length ?? 0}`
+      );
+    }
+  }
+
   return fixtures;
 }
 
@@ -26,7 +37,14 @@ export function useFixturesByDate(date: Date) {
     staleTime: 30_000,
     refetchInterval: (query) => {
       const data = query.state.data as Fixture[] | undefined;
-      return data?.some((f) => f.state?.is_live) ? 30_000 : false;
+      if (!data?.length) return false;
+      // Fast poll when a match is live
+      if (data.some((f) => f.state?.is_live)) return 30_000;
+      // Slow poll while any match is not yet final/cancelled — picks up kick-off
+      const allSettled = data.every(
+        (f) => f.state?.is_final_state || f.state?.is_cancelled
+      );
+      return allSettled ? false : 60_000;
     },
   });
 }

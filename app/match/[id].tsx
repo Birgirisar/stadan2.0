@@ -94,6 +94,7 @@ export default function MatchDetailScreen() {
   const stateResult = fixture ? getMatchState(fixture.state) : null;
   const isPending = stateResult?.type === 'pending';
   const isFinished = stateResult?.type === 'finished';
+  const isLive = stateResult?.type === 'live';
   const venueName = fixture?.venue?.name ?? '';
   const leagueName = LEAGUES[fixture?.league_id as keyof typeof LEAGUES]?.displayName ?? fixture?.league?.name ?? '';
 
@@ -169,6 +170,7 @@ export default function MatchDetailScreen() {
             awayGoals={score.away}
             isFinished={isFinished ?? false}
             isPending={isPending ?? false}
+            isLive={isLive ?? false}
             motm={motm}
             homeForm={homeForm}
             awayForm={awayForm}
@@ -235,6 +237,7 @@ interface YfirliProps {
   awayGoals: number | null;
   isFinished: boolean;
   isPending: boolean;
+  isLive: boolean;
   motm: ReturnType<typeof computeMotm>;
   homeForm: import('../../lib/api/types').Fixture[] | undefined;
   awayForm: import('../../lib/api/types').Fixture[] | undefined;
@@ -254,6 +257,7 @@ function YfirliContent({
   awayGoals,
   isFinished,
   isPending,
+  isLive,
   motm,
   homeForm,
   awayForm,
@@ -295,6 +299,16 @@ function YfirliContent({
           awayGoals={awayGoals}
           isFinished={isFinished}
         />
+      )}
+
+      {/* Empty state — live match, no events recorded yet */}
+      {isLive && (!fixture.events || fixture.events.length === 0) && (
+        <View style={[styles.eventsEmpty, { borderColor: colors.border }]}>
+          <Ionicons name="football" size={14} color={colors.textMuted} />
+          <Text style={[styles.eventsEmptyText, { color: colors.textMuted }]}>
+            Engir skráðir atburðir enn
+          </Text>
+        </View>
       )}
 
       {/* Recent form */}
@@ -358,4 +372,19 @@ const styles = StyleSheet.create({
   retryText: { fontFamily: 'Manrope_700Bold', fontSize: 14 },
   backLink: { marginTop: 8 },
   backLinkText: { fontFamily: 'Manrope_600SemiBold', fontSize: 14 },
+  eventsEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingVertical: 20,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  eventsEmptyText: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 13.5,
+  },
 });

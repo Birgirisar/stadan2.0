@@ -2,13 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PanResponder, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LEAGUES } from '../../constants/leagues';
 import { useFixturesByDate } from '../../lib/api/fixtures';
 import type { Fixture } from '../../lib/api/types';
 import { useTheme } from '../../lib/theme/useTheme';
 import { getSectionHeading, toDateString } from '../../lib/utils/dates';
+import { getMatchState } from '../../lib/utils/state';
 import { DaySelector } from '../../components/fixtures/DaySelector';
 import { FilterChips, FilterType } from '../../components/fixtures/FilterChips';
 import { LeagueSection } from '../../components/fixtures/LeagueSection';
@@ -75,15 +76,35 @@ export default function LeikirScreen() {
     })
   ).current;
 
+  const isToday = toDateString(selectedDate) === toDateString(today);
+
+  // Reset live filter when navigating away from today — live games only exist today
+  useEffect(() => {
+    if (!isToday && activeFilter === 'live') setActiveFilter('all');
+  }, [isToday]);
+
   const { data: fixtures = [], isLoading, isFetching, error, refetch } = useFixturesByDate(selectedDate);
 
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
 
   const allGroups = useMemo(() => groupAndSort(fixtures), [fixtures]);
-  const hasLive = fixtures.some((f) => f.state?.is_live);
+  const hasLive = fixtures.some((f) => {
+    const t = getMatchState(f.state).type;
+    return t === 'live' || t === 'halftime';
+  });
 
   const filteredGroups = useMemo(() => {
-    if (activeFilter === 'live') return allGroups.filter((g) => g.fixtures.some((f) => f.state?.is_live));
+    if (activeFilter === 'live') {
+      return allGroups
+        .map((g) => ({
+          ...g,
+          fixtures: g.fixtures.filter((f) => {
+            const t = getMatchState(f.state).type;
+            return t === 'live' || t === 'halftime';
+          }),
+        }))
+        .filter((g) => g.fixtures.length > 0);
+    }
     if (activeFilter === 'male') return allGroups.filter((g) => [345, 348, 351].includes(g.leagueId));
     if (activeFilter === 'female') return allGroups.filter((g) => [1710, 1711].includes(g.leagueId));
     return allGroups;
@@ -114,7 +135,7 @@ export default function LeikirScreen() {
           onTouchEnd={() => { horizontalScrollActive.current = false; }}
           onTouchCancel={() => { horizontalScrollActive.current = false; }}
         >
-          <FilterChips active={activeFilter} onSelect={setActiveFilter} hasLive={hasLive} />
+          <FilterChips active={activeFilter} onSelect={setActiveFilter} hasLive={hasLive} isToday={isToday} />
         </View>
 
         {!isLoading && !error && (

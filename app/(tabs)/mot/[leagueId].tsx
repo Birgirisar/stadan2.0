@@ -6,7 +6,6 @@ import React, { useRef, useState, useMemo } from 'react';
 import {
   Animated,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -17,13 +16,16 @@ import { useTheme } from '../../../lib/theme/useTheme';
 import { useLeagueMeta, useLeagueStandings } from '../../../lib/hooks/useLeagueDetail';
 import { useFollowedLeagues } from '../../../lib/hooks/useFollowedLeagues';
 import { useFixturesByDate } from '../../../lib/api/fixtures';
+import { useLeagueFixtures } from '../../../lib/hooks/useLeagueFixtures';
 import { getLiveTeamIds } from '../../../lib/utils/liveTeams';
 import { LEAGUES } from '../../../constants/leagues';
-import { LeagueSubTabs, SUBTABS_HEIGHT, type LeagueSubTabId } from '../../../components/league-detail/LeagueSubTabs';
+import { LeagueSubTabs, type LeagueSubTabId } from '../../../components/league-detail/LeagueSubTabs';
 import { ViewToggle, type ViewMode } from '../../../components/league-detail/ViewToggle';
 import { StandingsTable } from '../../../components/league-detail/StandingsTable';
 import { SeasonDropdown } from '../../../components/league-detail/SeasonDropdown';
 import { LeaguePlaceholderTab } from '../../../components/league-detail/LeaguePlaceholderTab';
+import { RoundSelector } from '../../../components/league-detail/RoundSelector';
+import { LeagueFixturesContent } from '../../../components/league-detail/LeagueFixturesContent';
 
 // Height of the frosted top bar (below insets) — used for sticky sub-tabs positioning
 const TOPBAR_BASE_H = 60;
@@ -38,8 +40,8 @@ export default function LeagueDetailScreen() {
   const topBarH = insets.top + TOPBAR_BASE_H;
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
 
-  // Data hooks
-  const { data: league, isLoading: leagueLoading } = useLeagueMeta(leagueId);
+  // ── Data ─────────────────────────────────────────────────────────────────
+  const { data: league } = useLeagueMeta(leagueId);
   const { toggle, isFollowed } = useFollowedLeagues();
   const followed = isFollowed(leagueId);
 
@@ -50,7 +52,27 @@ export default function LeagueDetailScreen() {
 
   const { data: standingRows = [], isLoading: standingsLoading } = useLeagueStandings(activeSeasonId);
 
-  // Live fixtures for today (to compute live team IDs)
+  // Leikir tab — rounds + fixtures (always-called hook; queries enabled only when seasonId is set)
+  const {
+    rounds,
+    selectedRoundId,
+    setSelectedRoundId,
+    fixtures,
+    roundsLoading,
+    fixturesLoading,
+    roundsError,
+    fixturesError,
+    refetchRounds,
+    refetchFixtures,
+  } = useLeagueFixtures(activeSeasonId);
+
+  // The full RoundFull object for the currently selected round (for the date header)
+  const selectedRound = useMemo(
+    () => rounds.find((r) => r.id === selectedRoundId),
+    [rounds, selectedRoundId]
+  );
+
+  // Live fixtures for today (to compute live team IDs in the standings)
   const today = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -62,7 +84,7 @@ export default function LeagueDetailScreen() {
     [todayFixtures, leagueId]
   );
 
-  // UI state
+  // ── UI state ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<LeagueSubTabId>('tafla');
   const [viewMode, setViewMode] = useState<ViewMode>('tafla');
   const [seasonDropdownOpen, setSeasonDropdownOpen] = useState(false);
@@ -71,7 +93,6 @@ export default function LeagueDetailScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [leagueHeaderHeight, setLeagueHeaderHeight] = useState(80);
 
-  // Title fades in over the last 60px of the league header scrolling away
   const titleOpacity = scrollY.interpolate({
     inputRange: [leagueHeaderHeight - 60, leagueHeaderHeight],
     outputRange: [0, 1],
@@ -108,17 +129,27 @@ export default function LeagueDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      
+
+      {/*
+       * The ScrollView has exactly 3 direct children:
+       *   [0] Large league header — scrolls away
+       *   [1] Sticky area — sub-tabs + optional round selector
+       *   [2] Content area — tab content (single wrapper so index stays stable)
+       *
+       * stickyHeaderIndices={[1]} pins the sub-tabs + round selector below the
+       * frosted top bar as you scroll through the fixture list.
+       */}
       <Animated.ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingTop: topBarH, paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
+        stickyHeaderIndices={[1]}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
           useNativeDriver: true,
         })}
       >
-        {/* Large league header — scrolls away */}
+        {/* ── [0] Large league header — scrolls away ── */}
         <View
           style={styles.leagueHeader}
           onLayout={(e) => setLeagueHeaderHeight(e.nativeEvent.layout.height)}
@@ -142,38 +173,60 @@ export default function LeagueDetailScreen() {
           </View>
         </View>
 
-        {/* Sticky sub-tabs */}
-        <LeagueSubTabs active={activeTab} onChange={setActiveTab} />
-
-        {/* View toggle — only on Tafla */}
-        {activeTab === 'tafla' && (
-          <ViewToggle mode={viewMode} onChange={setViewMode} />
-        )}
-
-        {/* Tab content */}
-        {activeTab === 'tafla' ? (
-          standingsLoading ? (
-            <View style={styles.loading}>
-              <Text style={[styles.loadingText, { color: colors.textMuted }]}>Sæki töflu…</Text>
-            </View>
-          ) : standingRows.length === 0 ? (
-            <View style={styles.loading}>
-              <Text style={[styles.loadingText, { color: colors.textMuted }]}>Engar niðurstöður</Text>
-            </View>
-          ) : (
-            <StandingsTable
-              rows={standingRows}
-              mode={viewMode}
-              leagueId={leagueId}
-              liveTeamIds={liveTeamIds}
+        {/* ── [1] Sticky header: sub-tabs + round selector for Leikir ── */}
+        <View style={{ backgroundColor: colors.bg }}>
+          <LeagueSubTabs active={activeTab} onChange={setActiveTab} />
+          {activeTab === 'leikir' && (
+            <RoundSelector
+              rounds={rounds}
+              selectedRoundId={selectedRoundId}
+              onSelect={setSelectedRoundId}
+              isLoading={roundsLoading}
             />
-          )
-        ) : (
-          <LeaguePlaceholderTab />
-        )}
+          )}
+          {/* ViewToggle lives here only for Tafla so it's part of the sticky area */}
+          {activeTab === 'tafla' && (
+            <ViewToggle mode={viewMode} onChange={setViewMode} />
+          )}
+        </View>
+
+        {/* ── [2] Content — always a single wrapper so index 2 is stable ── */}
+        <View>
+          {activeTab === 'tafla' ? (
+            standingsLoading ? (
+              <View style={styles.loading}>
+                <Text style={[styles.loadingText, { color: colors.textMuted }]}>Sæki töflu…</Text>
+              </View>
+            ) : standingRows.length === 0 ? (
+              <View style={styles.loading}>
+                <Text style={[styles.loadingText, { color: colors.textMuted }]}>Engar niðurstöður</Text>
+              </View>
+            ) : (
+              <StandingsTable
+                rows={standingRows}
+                mode={viewMode}
+                leagueId={leagueId}
+                liveTeamIds={liveTeamIds}
+              />
+            )
+          ) : activeTab === 'leikir' ? (
+            <LeagueFixturesContent
+              fixtures={fixtures}
+              selectedRound={selectedRound}
+              roundsLoading={roundsLoading}
+              fixturesLoading={fixturesLoading}
+              roundsError={roundsError}
+              fixturesError={fixturesError}
+              onRetryRounds={refetchRounds}
+              onRetryFixtures={refetchFixtures}
+            />
+          ) : (
+            <LeaguePlaceholderTab />
+          )}
+        </View>
       </Animated.ScrollView>
 
-      {/* Sticky frosted top bar */}
+      {/* ── Sticky frosted top bar ── */}
       <View style={[styles.topbar, { top: 0 }]} pointerEvents="box-none">
         <BlurView
           intensity={80}

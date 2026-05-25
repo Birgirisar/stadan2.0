@@ -43,6 +43,17 @@ export interface Round {
   name: string;
 }
 
+/** Full round object returned from /seasons/{id}?include=rounds or /rounds/{id} */
+export interface RoundFull {
+  id: number;
+  name: string;
+  finished: boolean;
+  starting_at: string | null;
+  ending_at: string | null;
+  /** Embedded fixtures — present when fetched via /rounds/{id}?include=fixtures.* */
+  fixtures?: Fixture[];
+}
+
 export interface Fixture {
   id: number;
   league_id: number;

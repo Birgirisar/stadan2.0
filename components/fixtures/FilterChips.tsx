@@ -8,6 +8,7 @@ interface Props {
   active: FilterType;
   onSelect: (f: FilterType) => void;
   hasLive: boolean;
+  isToday: boolean;
 }
 
 function LiveDot({ color }: { color: string }) {
@@ -35,8 +36,10 @@ const CHIPS: Array<{ id: FilterType; label: string }> = [
   { id: 'female', label: 'Kvenna' },
 ];
 
-export function FilterChips({ active, onSelect, hasLive }: Props) {
+export function FilterChips({ active, onSelect, hasLive, isToday }: Props) {
   const { colors } = useTheme();
+
+  const visibleChips = isToday ? CHIPS : CHIPS.filter((c) => c.id !== 'live');
 
   return (
     <ScrollView
@@ -44,7 +47,7 @@ export function FilterChips({ active, onSelect, hasLive }: Props) {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.container}
     >
-      {CHIPS.map((chip) => {
+      {visibleChips.map((chip) => {
         const isActive = active === chip.id;
         return (
           <TouchableOpacity
