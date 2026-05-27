@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Animated,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -85,7 +86,7 @@ export default function MatchDetailScreen() {
   const HERO_COLLAPSED = HERO_COLLAPSED_BASE + HERO_SUBTABS_H + insets.top;
   const collapseRange = Math.max(heroFull - HERO_COLLAPSED, 1);
 
-  const { data: fixture, isLoading, error, refetch } = useMatchDetail(id);
+  const { data: fixture, isLoading, isFetching, error, refetch } = useMatchDetail(id);
   console.log(fixture?.id);
 
   const home = fixture?.participants?.find((p) => p.meta.location === 'home');
@@ -160,6 +161,15 @@ export default function MatchDetailScreen() {
           { paddingTop: heroFull, paddingBottom: insets.bottom + 110, minHeight: screenHeight + collapseRange },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching}
+            onRefresh={refetch}
+            tintColor={colors.text}
+            colors={[colors.text]}
+            progressViewOffset={heroFull}
+          />
+        }
       >
         {activeTab === 'yfirlit' && (
           <YfirliContent
