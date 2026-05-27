@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Animated, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import type { DetailedFixture } from '../../lib/api/types';
 import { useTheme } from '../../lib/theme/useTheme';
 import { getScore } from '../../lib/utils/score';
@@ -40,6 +41,12 @@ export function HeroCollapsing({
   onTabChange,
 }: Props) {
   const { colors, theme } = useTheme();
+  const router = useRouter();
+
+  const goToTeam = (teamId: number | undefined) => {
+    if (!teamId) return;
+    router.push(`/team/${teamId}` as any);
+  };
 
   const home = fixture.participants?.find((p) => p.meta.location === 'home');
   const away = fixture.participants?.find((p) => p.meta.location === 'away');
@@ -187,9 +194,9 @@ export function HeroCollapsing({
       >
         {/* Row 1: crests + score digits */}
         <Animated.View style={[styles.scoreRow1, { opacity: scoreOpacity }]}>
-          <View style={styles.teamCrestCell}>
+          <Pressable style={styles.teamCrestCell} onPress={() => goToTeam(home?.id)} hitSlop={8}>
             <TeamBadge imageUrl={home?.image_path ?? ''} shortCode={home?.short_code ?? ''} size={48} />
-          </View>
+          </Pressable>
           <Animated.View style={[styles.scoreCenterCell, { transform: [{ scale: scoreScale }] }]}>
             {isPending ? (
               <Text style={[styles.scoreValue, { color: colors.text }]}>
@@ -203,18 +210,18 @@ export function HeroCollapsing({
               </View>
             )}
           </Animated.View>
-          <View style={styles.teamCrestCell}>
+          <Pressable style={styles.teamCrestCell} onPress={() => goToTeam(away?.id)} hitSlop={8}>
             <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} size={48} />
-          </View>
+          </Pressable>
         </Animated.View>
 
         {/* Row 2: team names + status pill */}
         <Animated.View style={[styles.scoreRow2, { opacity: namesOpacity }]}>
-          <View style={styles.teamNameCell}>
+          <Pressable style={styles.teamNameCell} onPress={() => goToTeam(home?.id)}>
             <Text style={[styles.teamLabel, { color: colors.text }]} numberOfLines={2}>
               {home?.name ?? ''}
             </Text>
-          </View>
+          </Pressable>
           <View style={styles.statusCell}>
             {!isPending && !!statusLabel && (
               <View
@@ -237,11 +244,11 @@ export function HeroCollapsing({
               </View>
             )}
           </View>
-          <View style={styles.teamNameCell}>
+          <Pressable style={styles.teamNameCell} onPress={() => goToTeam(away?.id)}>
             <Text style={[styles.teamLabel, { color: colors.text }]} numberOfLines={2}>
               {away?.name ?? ''}
             </Text>
-          </View>
+          </Pressable>
         </Animated.View>
 
         {/* Row 3: scorers per team */}

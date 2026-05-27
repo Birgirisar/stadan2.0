@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import type { StandingRow } from '../../lib/api/types';
 import { TeamBadge } from '../fixtures/TeamBadge';
 import { useTheme } from '../../lib/theme/useTheme';
@@ -13,6 +14,8 @@ interface Props {
   isLast?: boolean;
   /** Highlight this row with accent-soft background (used by match detail Tafla) */
   isHighlighted?: boolean;
+  /** Called when the row is tapped — if omitted, row is non-interactive */
+  onPress?: () => void;
 }
 
 // Try a direct numeric field on the raw row object before falling back to details[]
@@ -27,8 +30,9 @@ function gdStr(n: number): string {
   return `${n}`;
 }
 
-export function StandingsRow({ row, mode, zoneColor, isLive, isLast, isHighlighted }: Props) {
+export function StandingsRow({ row, mode, zoneColor, isLive, isLast, isHighlighted, onPress }: Props) {
   const { colors } = useTheme();
+  const router = useRouter();
   const team = row.participant;
 
   const played = getStatRaw(row, 'overall_matches_played', ['overall_matches_played', 'OVERALL_MATCHES_PLAYED', 'overall-matches-played']);
@@ -40,15 +44,20 @@ export function StandingsRow({ row, mode, zoneColor, isLive, isLast, isHighlight
 
   const formLetters = parseForm(row.form);
 
+  const teamId = row.participant_id ?? row.team_id ?? row.participant?.id;
+  const handlePress = onPress ?? (teamId ? () => router.push(`/team/${teamId}` as any) : undefined);
+
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={handlePress}
+      style={({ pressed }) => [
         styles.row,
         {
           borderBottomColor: colors.border,
           borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
         },
         isHighlighted && { backgroundColor: colors.accentSoft },
+        pressed && handlePress && { opacity: 0.65 },
       ]}
     >
       {/* Zone stripe */}
@@ -117,7 +126,7 @@ export function StandingsRow({ row, mode, zoneColor, isLive, isLast, isHighlight
           ))}
         </View>
       )}
-    </View>
+    </Pressable>
   );
 }
 

@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import type { Standing } from '../../lib/api/types';
 import { useTheme } from '../../lib/theme/useTheme';
 import { TeamBadge } from '../fixtures/TeamBadge';
@@ -24,6 +25,7 @@ function getStat(s: Standing, typeId: number): number {
 
 export function MiniLeagueTable({ standings, homeTeamId, awayTeamId, onSeeTable }: Props) {
   const { colors } = useTheme();
+  const router = useRouter();
 
   const homeRow = standings.find((s) => getTeamId(s) === homeTeamId);
   const awayRow = standings.find((s) => getTeamId(s) === awayTeamId);
@@ -86,12 +88,14 @@ export function MiniLeagueTable({ standings, homeTeamId, awayTeamId, onSeeTable 
         const gdStr = gd > 0 ? `+${gd}` : `${gd}`;
 
         return (
-          <View
+          <Pressable
             key={`row-${idx}`}
-            style={[
+            onPress={() => router.push(`/team/${teamId}` as any)}
+            style={({ pressed }) => [
               styles.tableRow,
               { borderColor: colors.border },
               isHighlight && { backgroundColor: colors.accentSoft },
+              pressed && { opacity: 0.65 },
             ]}
           >
             <Text style={[styles.colNum, styles.posText, { color: colors.textSecondary }]}>
@@ -121,7 +125,7 @@ export function MiniLeagueTable({ standings, homeTeamId, awayTeamId, onSeeTable 
               {gdStr}
             </Text>
             <Text style={[styles.colPts, styles.ptsText, { color: colors.text }]}>{pts}</Text>
-          </View>
+          </Pressable>
         );
       })}
     </View>
