@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { toDateString } from '../utils/dates';
+import { getMatchState } from '../utils/state';
 import type { Fixture } from './types';
 import { smGet } from './sportmonks';
 
@@ -38,13 +39,13 @@ export function useFixturesByDate(date: Date) {
     refetchInterval: (query) => {
       const data = query.state.data as Fixture[] | undefined;
       if (!data?.length) return false;
-      // Fast poll when a match is live
-      if (data.some((f) => f.state?.is_live)) return 30_000;
-      // Slow poll while any match is not yet final/cancelled — picks up kick-off
-      const allSettled = data.every(
-        (f) => f.state?.is_final_state || f.state?.is_cancelled
-      );
-      return allSettled ? false : 60_000;
+      const types = data.map((f) => getMatchState(f.state).type);
+      // Fast poll while any match is live or at halftime
+      if (types.some((t) => t === 'live' || t === 'halftime')) return 60_000;
+      // Slow poll while any match is still pending — catches kick-off
+      if (types.some((t) => t === 'pending')) return 120_000;
+      // All finished or cancelled — stop polling
+      return false;
     },
   });
 }

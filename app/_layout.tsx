@@ -14,13 +14,19 @@ import {
   Manrope_700Bold,
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { AppState, type AppStateStatus, View } from 'react-native';
+
+// Pause React Query polling when the app is backgrounded / screen locked,
+// resume when it comes back to the foreground.
+function onAppStateChange(status: AppStateStatus) {
+  focusManager.setFocused(status === 'active');
+}
 import { BottomDock } from '../components/ui/BottomDock';
 import { ThemeProvider } from '../lib/theme/ThemeProvider';
 import { useTheme } from '../lib/theme/useTheme';
@@ -45,6 +51,11 @@ function AppShell() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', onAppStateChange);
+    return () => sub.remove();
+  }, []);
+
   const [fontsLoaded, fontError] = useFonts({
     Manrope_400Regular,
     Manrope_500Medium,

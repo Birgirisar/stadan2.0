@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchMatchDetail } from '../api/matchDetail';
+import { getMatchState } from '../utils/state';
 
 export function useMatchDetail(fixtureId: string | number | undefined) {
   return useQuery({
@@ -10,10 +11,11 @@ export function useMatchDetail(fixtureId: string | number | undefined) {
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return false;
-      if (data.state?.is_live) return 30_000;
-      if (data.state?.is_final_state || data.state?.is_cancelled) return false;
-      // Pending — keep polling until kick-off happens
-      return 60_000;
+      const type = getMatchState(data.state).type;
+      if (type === 'live' || type === 'halftime') return 60_000;
+      if (type === 'finished' || type === 'cancelled') return false;
+      // Pending — slow poll until kick-off
+      return 120_000;
     },
   });
 }
