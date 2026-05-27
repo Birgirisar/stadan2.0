@@ -18,7 +18,8 @@ export function TopScorersList({ scorers }: Props) {
       <Text style={[styles.title, { color: colors.textSecondary }]}>Markahæstir</Text>
       {scorers.map((scorer, idx) => {
         const player = scorer.player;
-        const name = player?.common_name ?? player?.display_name ?? player?.name ?? '—';
+        const name = player?.display_name ?? player?.name ?? player?.common_name ?? '—';
+        console.log('TopScorersList - player:', player);
         const img = player?.image_path ?? '';
         const goals = scorer.total;
         const isLast = idx === scorers.length - 1;

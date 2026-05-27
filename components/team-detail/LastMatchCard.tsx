@@ -1,11 +1,33 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../lib/theme/useTheme';
 import { TeamBadge } from '../fixtures/TeamBadge';
 import { getScore } from '../../lib/utils/score';
 import { formatKickoffTime } from '../../lib/utils/dates';
+import { getMatchState, getLiveMinute } from '../../lib/utils/state';
 import type { Fixture } from '../../lib/api/types';
+
+function PulseDot({ color }: { color: string }) {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.3, duration: 750, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 750, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.View
+      style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color, opacity }}
+    />
+  );
+}
 
 interface Props {
   fixture: Fixture | null;
@@ -34,11 +56,22 @@ export function LastMatchCard({ fixture, teamId }: Props) {
   const score = getScore(fixture);
   const isHome = home?.id === teamId;
 
+  const stateResult = getMatchState(fixture.state);
+  // Schedule endpoint doesn't include the `state` object — fall back to state_id
+  // (mirrors LIVE_STATE_IDS / HALFTIME in useTeamDetail)
+  const LIVE_IDS = new Set([2, 3, 25]);   // 1H, 2H, ET
+  const HT_IDS   = new Set([13]);          // Half-time break
+  const isLive =
+    stateResult.type === 'live' || stateResult.type === 'halftime' ||
+    LIVE_IDS.has(fixture.state_id) || HT_IDS.has(fixture.state_id);
+  const isHalftime = stateResult.type === 'halftime' || HT_IDS.has(fixture.state_id);
+  const liveMinute = getLiveMinute(fixture.periods);
+
   // Result colour from this team's perspective
-  let resultColor = colors.draw;
+  let resultColor = isLive ? colors.live : colors.draw;
   const hg = score.home ?? 0;
   const ag = score.away ?? 0;
-  if (hg !== ag) {
+  if (!isLive && hg !== ag) {
     const teamWon = isHome ? hg > ag : ag > hg;
     resultColor = teamWon ? colors.win : colors.loss;
   }
@@ -58,15 +91,29 @@ export function LastMatchCard({ fixture, teamId }: Props) {
     <Pressable
       style={({ pressed }) => [
         styles.card,
-        { backgroundColor: colors.surface, borderColor: colors.border },
+        {
+          backgroundColor: colors.surface,
+          borderColor: isLive ? colors.live + '55' : colors.border,
+        },
         pressed && { opacity: 0.75 },
       ]}
       onPress={() => router.push(`/match/${fixture.id}` as any)}
     >
       <Text style={[styles.cardLabel, { color: colors.textMuted }]}>Síðasti leikur</Text>
 
-      {date && (
-        <Text style={[styles.date, { color: colors.accent }]}>{date}</Text>
+      {isLive ? (
+        <View style={styles.liveRow}>
+          <PulseDot color={colors.live} />
+          <Text style={[styles.liveLabel, { color: colors.live }]}>
+            {isHalftime
+              ? 'Hlétími'
+              : liveMinute
+              ? `Í beinni · ${liveMinute}`
+              : 'Í beinni'}
+          </Text>
+        </View>
+      ) : (
+        date && <Text style={[styles.date, { color: colors.accent }]}>{date}</Text>
       )}
 
       {/* Same two-column layout as NextMatchCard; score replaces "vs" */}
@@ -121,6 +168,16 @@ const styles = StyleSheet.create({
   },
   date: {
     fontFamily: 'Manrope_600SemiBold',
+    fontSize: 11.5,
+    letterSpacing: 0.1,
+  },
+  liveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  liveLabel: {
+    fontFamily: 'Manrope_700Bold',
     fontSize: 11.5,
     letterSpacing: 0.1,
   },
