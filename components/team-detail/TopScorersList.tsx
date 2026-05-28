@@ -6,20 +6,20 @@ import type { TopScorerEntry } from '../../lib/api/teamDetail';
 
 interface Props {
   scorers: TopScorerEntry[];
+  title?: string;
 }
 
-export function TopScorersList({ scorers }: Props) {
+export function TopScorersList({ scorers, title = 'Markahæstir' }: Props) {
   const { colors } = useTheme();
 
   if (!scorers.length) return null;
 
   return (
     <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.title, { color: colors.textSecondary }]}>Markahæstir</Text>
+      <Text style={[styles.title, { color: colors.textSecondary }]}>{title}</Text>
       {scorers.map((scorer, idx) => {
         const player = scorer.player;
         const name = player?.display_name ?? player?.name ?? player?.common_name ?? '—';
-        console.log('TopScorersList - player:', player);
         const img = player?.image_path ?? '';
         const goals = scorer.total;
         const isLast = idx === scorers.length - 1;

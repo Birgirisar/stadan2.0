@@ -59,6 +59,7 @@ export default function TeamDetailScreen() {
     recentFixtures,
     standings,
     topScorers,
+    topAssists,
     seasonStats,
     teamLoading,
     scheduleLoading,
@@ -284,6 +285,7 @@ export default function TeamDetailScreen() {
             recentFixtures={recentFixtures}
             standings={standings}
             topScorers={topScorers}
+            topAssists={topAssists}
             seasonStats={seasonStats}
             venue={team?.venue ?? null}
             scheduleLoading={scheduleLoading}
@@ -309,6 +311,7 @@ interface YfirliProps {
   recentFixtures: import('../../lib/api/types').Fixture[];
   standings: import('../../lib/api/types').StandingRow[] | null;
   topScorers: import('../../lib/api/teamDetail').TopScorerEntry[];
+  topAssists: import('../../lib/api/teamDetail').TopScorerEntry[];
   seasonStats: import('../../lib/hooks/useTeamDetail').SeasonStats | null;
   venue: import('../../lib/api/teamDetail').TeamVenue | null | undefined;
   scheduleLoading: boolean;
@@ -324,6 +327,7 @@ function YfirliContent({
   recentFixtures,
   standings,
   topScorers,
+  topAssists,
   seasonStats,
   venue,
   scheduleLoading,
@@ -364,6 +368,11 @@ function YfirliContent({
       {/* Top scorers — only if we have any */}
       {inSupportedLeague && topScorers.length > 0 && (
         <TopScorersList scorers={topScorers} />
+      )}
+
+      {/* Top assists — only if we have any */}
+      {inSupportedLeague && topAssists.length > 0 && (
+        <TopScorersList scorers={topAssists} title="Stoðsendingar" />
       )}
 
       {/* Season stats — only for supported leagues */}

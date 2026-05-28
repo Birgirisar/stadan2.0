@@ -109,14 +109,13 @@ export interface TopScorerEntry {
   };
 }
 
-/** Fetch top scorers for a season. Returns all entries (league-wide). */
+/** Fetch top scorers for a season via the season endpoint (more accurate data). */
 export async function fetchTopScorers(seasonId: number): Promise<TopScorerEntry[]> {
   try {
-    const raw = await smGet<TopScorerEntry[]>(`/topscorers/seasons/${seasonId}`, {
-      include: 'player;participant',
-      per_page: '50',
+    const season = await smGet<{ topscorers?: TopScorerEntry[] }>(`/seasons/${seasonId}`, {
+      include: 'topscorers.player;topscorers.participant',
     });
-    return Array.isArray(raw) ? raw : [];
+    return Array.isArray(season?.topscorers) ? season.topscorers : [];
   } catch {
     return [];
   }

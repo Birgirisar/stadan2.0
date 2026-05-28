@@ -13,7 +13,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../lib/theme/useTheme';
+import { useQuery } from '@tanstack/react-query';
 import { useLeagueMeta, useLeagueStandings } from '../../../lib/hooks/useLeagueDetail';
+import { fetchTopScorers } from '../../../lib/api/teamDetail';
 import { useFollowedLeagues } from '../../../lib/hooks/useFollowedLeagues';
 import { useFixturesByDate } from '../../../lib/api/fixtures';
 import { useLeagueFixtures } from '../../../lib/hooks/useLeagueFixtures';
@@ -24,6 +26,7 @@ import { ViewToggle, type ViewMode } from '../../../components/league-detail/Vie
 import { StandingsTable } from '../../../components/league-detail/StandingsTable';
 import { SeasonDropdown } from '../../../components/league-detail/SeasonDropdown';
 import { LeaguePlaceholderTab } from '../../../components/league-detail/LeaguePlaceholderTab';
+import { LeagueTopScorers } from '../../../components/league-detail/LeagueTopScorers';
 import { RoundSelector } from '../../../components/league-detail/RoundSelector';
 import { LeagueFixturesContent } from '../../../components/league-detail/LeagueFixturesContent';
 
@@ -51,6 +54,13 @@ export default function LeagueDetailScreen() {
   const activeSeasonId = selectedSeasonId ?? currentSeasonId;
 
   const { data: standingRows = [], isLoading: standingsLoading } = useLeagueStandings(activeSeasonId);
+
+  const { data: topScorers = [], isLoading: scorersLoading } = useQuery({
+    queryKey: ['league-top-scorers', activeSeasonId],
+    queryFn: () => fetchTopScorers(activeSeasonId!),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeSeasonId != null,
+  });
 
   // Leikir tab — rounds + fixtures (always-called hook; queries enabled only when seasonId is set)
   const {
@@ -220,6 +230,14 @@ export default function LeagueDetailScreen() {
               onRetryRounds={refetchRounds}
               onRetryFixtures={refetchFixtures}
             />
+          ) : activeTab === 'leikmenn' ? (
+            scorersLoading ? (
+              <View style={styles.loading}>
+                <Text style={[styles.loadingText, { color: colors.textMuted }]}>Sæki markahæsta…</Text>
+              </View>
+            ) : (
+              <LeagueTopScorers scorers={topScorers} />
+            )
           ) : (
             <LeaguePlaceholderTab />
           )}

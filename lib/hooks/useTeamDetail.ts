@@ -43,6 +43,8 @@ export interface TeamDetailData {
   standings: StandingRow[] | null;
   /** Top scorers from this team */
   topScorers: TopScorerEntry[];
+  /** Top assist providers from this team */
+  topAssists: TopScorerEntry[];
   /** Stats from the team's standings row */
   seasonStats: SeasonStats | null;
   // Loading states
@@ -217,9 +219,12 @@ export function useTeamDetail(teamId: number): TeamDetailData {
   });
 
   const topScorers = (allScorers ?? [])
-    .filter((s) => s.participant_id === teamId)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 3);
+    .filter((s) => s.participant_id === teamId && s.type_id === 208)
+    .sort((a, b) => b.total - a.total);
+
+  const topAssists = (allScorers ?? [])
+    .filter((s) => s.participant_id === teamId && s.type_id === 209)
+    .sort((a, b) => b.total - a.total);
 
   // ── Season stats from standings ────────────────────────────────────────────
   const seasonStats = extractSeasonStats(standings as StandingRow[] ?? null, teamId);
@@ -234,6 +239,7 @@ export function useTeamDetail(teamId: number): TeamDetailData {
     recentFixtures,
     standings: (standings as StandingRow[] ?? null),
     topScorers,
+    topAssists,
     seasonStats,
     teamLoading,
     scheduleLoading,
