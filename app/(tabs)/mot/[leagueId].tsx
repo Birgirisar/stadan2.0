@@ -280,19 +280,19 @@ export default function LeagueDetailScreen() {
               style={[
                 styles.followBtn,
                 followed
-                  ? { backgroundColor: colors.goldSoft, borderColor: colors.gold + '80' }
-                  : { backgroundColor: colors.text, borderColor: colors.text },
+                  ? { backgroundColor: colors.goldSoft, borderColor: colors.gold + '66' }
+                  : { backgroundColor: colors.accentSoft, borderColor: colors.accent + '55' },
               ]}
             >
               <Ionicons
                 name={followed ? 'star' : 'star-outline'}
-                size={12}
-                color={followed ? colors.gold : colors.bg}
+                size={14}
+                color={followed ? colors.gold : colors.accent}
               />
               <Text
                 style={[
                   styles.followBtnText,
-                  { color: followed ? colors.gold : colors.bg },
+                  { color: followed ? colors.gold : colors.accent },
                 ]}
               >
                 {followed ? 'Fylgist með' : 'Fylgjast'}

@@ -223,25 +223,36 @@ export function HeroCollapsing({
             </Text>
           </Pressable>
           <View style={styles.statusCell}>
-            {!isPending && !!statusLabel && (
-              <View
-                style={[
-                  styles.statusPill,
-                  stateResult.type === 'live'
-                    ? { backgroundColor: colors.live }
-                    : { backgroundColor: colors.surfaceSunken },
-                ]}
-              >
-                {stateResult.type === 'live' && <View style={styles.liveDot} />}
-                <Text
+            {isPending && fixture.starting_at ? (
+              <Text style={[styles.pendingDate, { color: colors.textMuted }]}>
+                {(() => {
+                  const d = new Date(fixture.starting_at);
+                  const day = d.getDate();
+                  const month = d.toLocaleDateString('is-IS', { month: 'long', timeZone: 'Atlantic/Reykjavik' });
+                  return `${day}. ${month}`;
+                })()}
+              </Text>
+            ) : (
+              !!statusLabel && (
+                <View
                   style={[
-                    styles.statusText,
-                    { color: stateResult.type === 'live' ? '#fff' : colors.textMuted },
+                    styles.statusPill,
+                    stateResult.type === 'live'
+                      ? { backgroundColor: colors.live }
+                      : { backgroundColor: colors.surfaceSunken },
                   ]}
                 >
-                  {statusLabel}
-                </Text>
-              </View>
+                  {stateResult.type === 'live' && <View style={styles.liveDot} />}
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: stateResult.type === 'live' ? '#fff' : colors.textMuted },
+                    ]}
+                  >
+                    {statusLabel}
+                  </Text>
+                </View>
+              )
             )}
           </View>
           <Pressable style={styles.teamNameCell} onPress={() => goToTeam(away?.id)}>
@@ -427,6 +438,11 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  pendingDate: {
+    fontFamily: 'Manrope_600SemiBold',
+    fontSize: 12,
+    letterSpacing: 0.1,
   },
   leaguePill: {
     flexDirection: 'row',

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,6 +37,7 @@ function groupAndSort(fixtures: Fixture[]) {
 export default function LeikirScreen() {
   const { colors, theme, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const today = useMemo(() => {
     const d = new Date();
@@ -233,6 +235,7 @@ export default function LeikirScreen() {
                 />
               </TouchableOpacity>
               <TouchableOpacity
+                onPress={() => router.push('/stillingar' as any)}
                 style={[
                   styles.iconBtn,
                   {
