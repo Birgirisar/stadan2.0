@@ -20,6 +20,9 @@ export function BottomDock() {
   const pathname = usePathname();
   const router = useRouter();
 
+  // Search is a focused full-screen task — no dock needed there.
+  if (pathname === '/leit') return null;
+
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
 
   const isActive = (href: string) =>
@@ -84,7 +87,11 @@ export function BottomDock() {
           tint={tint}
           style={[styles.searchPill, { borderColor: colors.border }]}
         >
-          <TouchableOpacity style={styles.searchBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.searchBtn}
+            activeOpacity={0.7}
+            onPress={() => router.push('/leit' as any)}
+          >
             <Ionicons name="search-outline" size={22} color={colors.text} />
           </TouchableOpacity>
         </BlurView>
