@@ -44,7 +44,11 @@ function AppShell() {
   const { colors } = useTheme();
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* Tabs are root screens — swipe-back from a tab would pop to whatever was
+            in the stack before (e.g. match detail), which is never the right thing. */}
+        <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+      </Stack>
       <BottomDock />
     </View>
   );
