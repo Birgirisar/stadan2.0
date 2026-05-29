@@ -56,6 +56,30 @@ export function formatStartDate(isoString: string): string {
   }
 }
 
+// Returns "Í dag", "Á morgun", or "14. júní" — all in Reykjavik time.
+export function formatMatchDate(isoString: string): string {
+  try {
+    const tz = 'Atlantic/Reykjavik';
+    const date = new Date(isoString);
+    const now = new Date();
+
+    const fmt = (d: Date) =>
+      d.toLocaleDateString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz });
+
+    const matchStr = fmt(date);
+    const todayStr = fmt(now);
+    const tomorrowStr = fmt(new Date(now.getTime() + 86_400_000));
+
+    if (matchStr === todayStr) return 'Í dag';
+    if (matchStr === tomorrowStr) return 'Á morgun';
+
+    const [, mm, dd] = matchStr.split('-');
+    return `${parseInt(dd)}. ${MONTHS[parseInt(mm) - 1]}`;
+  } catch {
+    return '';
+  }
+}
+
 export function isSameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&

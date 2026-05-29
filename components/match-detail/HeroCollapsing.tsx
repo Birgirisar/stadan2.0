@@ -7,7 +7,7 @@ import type { DetailedFixture } from '../../lib/api/types';
 import { useTheme } from '../../lib/theme/useTheme';
 import { getScore } from '../../lib/utils/score';
 import { getMatchState, getLiveMinute } from '../../lib/utils/state';
-import { formatKickoffTime } from '../../lib/utils/dates';
+import { formatKickoffTime, formatMatchDate } from '../../lib/utils/dates';
 import { TeamBadge } from '../fixtures/TeamBadge';
 import { ScorersList } from './ScorersList';
 import { SubTabs, type SubTabId } from './SubTabs';
@@ -225,12 +225,7 @@ export function HeroCollapsing({
           <View style={styles.statusCell}>
             {isPending && fixture.starting_at ? (
               <Text style={[styles.pendingDate, { color: colors.textMuted }]}>
-                {(() => {
-                  const d = new Date(fixture.starting_at);
-                  const day = d.getDate();
-                  const month = d.toLocaleDateString('is-IS', { month: 'long', timeZone: 'Atlantic/Reykjavik' });
-                  return `${day}. ${month}`;
-                })()}
+                {formatMatchDate(fixture.starting_at)}
               </Text>
             ) : (
               !!statusLabel && (
