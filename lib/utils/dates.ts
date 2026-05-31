@@ -118,3 +118,19 @@ export function getMonthKey(isoString: string): string {
     return '';
   }
 }
+
+// Returns "12. maí" (same year as now) or "12. maí 2024" (different year).
+export function formatHistoricalDate(date: Date | string, now?: Date): string {
+  try {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const n = now ?? new Date();
+    const day = d.getDate();
+    const month = MONTHS[d.getMonth()];
+    if (d.getFullYear() === n.getFullYear()) {
+      return `${day}. ${month}`;
+    }
+    return `${day}. ${month} ${d.getFullYear()}`;
+  } catch {
+    return '';
+  }
+}

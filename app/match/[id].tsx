@@ -30,6 +30,7 @@ import { PlaceholderTab } from '../../components/match-detail/PlaceholderTab';
 import { LineupTab } from '../../components/match-detail/lineup/LineupTab';
 import { CommentaryTab } from '../../components/match-detail/commentary/CommentaryTab';
 import { TaflaTab } from '../../components/match-detail/TaflaTab';
+import { H2HTab } from '../../components/match-detail/h2h/H2HTab';
 
 // Estimated hero base height before measurement (without insets.top), includes subtabs
 const HERO_BASE_ESTIMATE = 246;
@@ -213,10 +214,18 @@ export default function MatchDetailScreen() {
             heroCollapsedH={HERO_COLLAPSED}
           />
         )}
+        {activeTab === 'innbyrðis' && (
+          <H2HTab
+            homeTeam={home}
+            awayTeam={away}
+            currentFixtureId={fixture.id}
+          />
+        )}
         {activeTab !== 'yfirlit' &&
           activeTab !== 'lidin' &&
           activeTab !== 'lysing' &&
-          activeTab !== 'tafla' && (
+          activeTab !== 'tafla' &&
+          activeTab !== 'innbyrðis' && (
           <PlaceholderTab />
         )}
       </Animated.ScrollView>
