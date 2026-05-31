@@ -1,34 +1,41 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useReducer } from 'react';
 
 const STORAGE_KEY = 'staðan:followed-leagues';
 
+// Module-level shared state — all hook instances read from and write to this.
+let _ids: number[] = [];
+let _loaded = false;
+const _listeners = new Set<() => void>();
+
+function _notify() {
+  _listeners.forEach((fn) => fn());
+}
+
+AsyncStorage.getItem(STORAGE_KEY).then((val) => {
+  if (val) {
+    try { _ids = JSON.parse(val); } catch { _ids = []; }
+  }
+  _loaded = true;
+  _notify();
+});
+
 export function useFollowedLeagues() {
-  const [followedIds, setFollowedIds] = useState<number[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [, rerender] = useReducer((n) => n + 1, 0);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((val) => {
-      if (val) {
-        try {
-          setFollowedIds(JSON.parse(val));
-        } catch {
-          setFollowedIds([]);
-        }
-      }
-      setLoaded(true);
-    });
+    _listeners.add(rerender);
+    return () => { _listeners.delete(rerender); };
   }, []);
 
   const toggle = useCallback((id: number) => {
-    setFollowedIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+    _ids = _ids.includes(id) ? _ids.filter((x) => x !== id) : [..._ids, id];
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(_ids));
+    _notify();
   }, []);
 
-  const isFollowed = useCallback((id: number) => followedIds.includes(id), [followedIds]);
+  // Reads module-level _ids at call time — always current after any re-render.
+  const isFollowed = useCallback((id: number) => _ids.includes(id), []);
 
-  return { followedIds, toggle, isFollowed, loaded };
+  return { followedIds: _ids, toggle, isFollowed, loaded: _loaded };
 }

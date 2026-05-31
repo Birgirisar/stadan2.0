@@ -60,7 +60,7 @@ function EventIcon({ iconType, colors }: { iconType: string; colors: ReturnType<
 export function EventRow({ event, side }: Props) {
   const { colors } = useTheme();
   const { line1Sub, iconType } = getEventLabel(event);
-  const playerName = event.player_name || event.player?.name || 'Óvitað';
+  const playerName = event.player_name || event.player?.name || 'Óþekkt';
   const minuteStr = formatMinute(event);
   const isHome = side === 'home';
   const isSub = event.type_id === EVENT_TYPE.SUBSTITUTION;

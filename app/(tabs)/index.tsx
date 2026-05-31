@@ -11,9 +11,11 @@ import type { Fixture } from '../../lib/api/types';
 import { useTheme } from '../../lib/theme/useTheme';
 import { getSectionHeading, toDateString } from '../../lib/utils/dates';
 import { getMatchState } from '../../lib/utils/state';
+import { useFollowedTeams } from '../../lib/hooks/useFollowedTeams';
 import { DaySelector } from '../../components/fixtures/DaySelector';
 import { FilterChips, FilterType } from '../../components/fixtures/FilterChips';
 import { LeagueSection } from '../../components/fixtures/LeagueSection';
+import { MatchRow } from '../../components/fixtures/MatchRow';
 
 function groupAndSort(fixtures: Fixture[]) {
   const map: Record<number, Fixture[]> = {};
@@ -89,15 +91,35 @@ export default function LeikirScreen() {
 
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
 
+  const { followedIds: followedTeamIds } = useFollowedTeams();
+
+  const followedTeamSet = useMemo(() => new Set(followedTeamIds), [followedTeamIds]);
+  const hasFollows = followedTeamIds.length > 0;
+
   const allGroups = useMemo(() => groupAndSort(fixtures), [fixtures]);
   const hasLive = fixtures.some((f) => {
     const t = getMatchState(f.state).type;
     return t === 'live' || t === 'halftime';
   });
 
+  const followedFixtures = useMemo(() => {
+    if (!hasFollows) return [];
+    return [...fixtures]
+      .filter((f) => {
+        const home = f.participants?.find((p) => p.meta.location === 'home');
+        const away = f.participants?.find((p) => p.meta.location === 'away');
+        return followedTeamSet.has(home?.id ?? -1) || followedTeamSet.has(away?.id ?? -1);
+      })
+      .sort((a, b) => a.starting_at_timestamp - b.starting_at_timestamp);
+  }, [fixtures, followedTeamSet, hasFollows]);
+
+  const followedFixtureIds = useMemo(() => new Set(followedFixtures.map((f) => f.id)), [followedFixtures]);
+
   const filteredGroups = useMemo(() => {
+    // Step 1: apply chip filter
+    let groups: typeof allGroups;
     if (activeFilter === 'live') {
-      return allGroups
+      groups = allGroups
         .map((g) => ({
           ...g,
           fixtures: g.fixtures.filter((f) => {
@@ -106,13 +128,41 @@ export default function LeikirScreen() {
           }),
         }))
         .filter((g) => g.fixtures.length > 0);
+    } else if (activeFilter === 'male') {
+      groups = allGroups.filter((g) => [345, 348, 351].includes(g.leagueId));
+    } else if (activeFilter === 'female') {
+      groups = allGroups.filter((g) => [1710, 1711].includes(g.leagueId));
+    } else if (activeFilter === 'favorites') {
+      // Show only followed fixtures, still grouped by league
+      return allGroups
+        .map((g) => ({
+          ...g,
+          fixtures: g.fixtures.filter((f) => followedFixtureIds.has(f.id)),
+        }))
+        .filter((g) => g.fixtures.length > 0);
+    } else {
+      groups = allGroups;
     }
-    if (activeFilter === 'male') return allGroups.filter((g) => [345, 348, 351].includes(g.leagueId));
-    if (activeFilter === 'female') return allGroups.filter((g) => [1710, 1711].includes(g.leagueId));
-    return allGroups;
-  }, [allGroups, activeFilter]);
 
-  const totalCount = filteredGroups.reduce((sum, g) => sum + g.fixtures.length, 0);
+    // Dedup — remove fixtures shown in the "Þú fylgist með" section above
+    if (followedFixtureIds.size > 0) {
+      groups = groups
+        .map((g) => ({
+          ...g,
+          fixtures: g.fixtures.filter((f) => !followedFixtureIds.has(f.id)),
+        }))
+        .filter((g) => g.fixtures.length > 0);
+    }
+
+    return groups;
+  }, [allGroups, activeFilter, followedFixtureIds]);
+
+  const showFollowedSection = activeFilter !== 'favorites' && followedFixtures.length > 0;
+
+  const totalCount =
+    filteredGroups.reduce((sum, g) => sum + g.fixtures.length, 0) +
+    (showFollowedSection ? followedFixtures.length : 0);
+
   const sectionLabel = getSectionHeading(selectedDate);
 
   return (
@@ -179,12 +229,78 @@ export default function LeikirScreen() {
           </View>
         )}
 
-        {!isLoading && !error && filteredGroups.length === 0 && (
+        {/* Favorites chip: no follows at all */}
+        {!isLoading && !error && activeFilter === 'favorites' && !hasFollows && (
+          <View
+            style={[
+              styles.favEmptyCard,
+              { backgroundColor: colors.surface, borderColor: colors.borderStrong },
+            ]}
+          >
+            <View style={[styles.favEmptyIcon, { backgroundColor: colors.surfaceSunken }]}>
+              <Ionicons name="star-outline" size={18} color={colors.textMuted} />
+            </View>
+            <View style={styles.favEmptyText}>
+              <Text style={[styles.favEmptyTitle, { color: colors.text }]}>
+                Þú fylgist ekki með neinu
+              </Text>
+              <Text style={[styles.favEmptySub, { color: colors.textMuted }]}>
+                Smelltu á „Fylgjast" í lið eða deild til að bæta hér við.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Favorites chip: has follows but no matched fixtures today */}
+        {!isLoading && !error && activeFilter === 'favorites' && hasFollows && filteredGroups.length === 0 && (
+          <View
+            style={[
+              styles.favEmptyCard,
+              { backgroundColor: colors.surface, borderColor: colors.borderStrong },
+            ]}
+          >
+            <View style={[styles.favEmptyIcon, { backgroundColor: colors.surfaceSunken }]}>
+              <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
+            </View>
+            <View style={styles.favEmptyText}>
+              <Text style={[styles.favEmptyTitle, { color: colors.text }]}>
+                Engir fylgst-leikir í dag
+              </Text>
+              <Text style={[styles.favEmptySub, { color: colors.textMuted }]}>
+                Prófaðu annan dag eða farðu í Allir leikir.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Generic empty state (non-favorites) */}
+        {!isLoading && !error && activeFilter !== 'favorites' && filteredGroups.length === 0 && !showFollowedSection && (
           <View style={styles.center}>
             <Text style={[styles.msgText, { color: colors.textMuted }]}>
               {activeFilter === 'live' ? 'Engir leikir í beinni' : 'Engir leikir í dag'}
             </Text>
           </View>
+        )}
+
+        {/* "Þú fylgist með" section — followed fixtures above league groups */}
+        {showFollowedSection && (
+          <>
+            <View style={styles.followedHeading}>
+              <Text style={[styles.followedHeadingText, { color: colors.textSecondary }]}>
+                Þú fylgist með
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.followedCard,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
+              {followedFixtures.map((f, i) => (
+                <MatchRow key={f.id} fixture={f} isLast={i === followedFixtures.length - 1} />
+              ))}
+            </View>
+          </>
         )}
 
         {filteredGroups.map((g) => (
@@ -338,5 +454,58 @@ const styles = StyleSheet.create({
   retryText: {
     fontFamily: 'Manrope_600SemiBold',
     fontSize: 14,
+  },
+  followedHeading: {
+    paddingHorizontal: 22,
+    paddingTop: 18,
+    paddingBottom: 6,
+  },
+  followedHeadingText: {
+    fontFamily: 'BricolageGrotesque_700Bold',
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 0.78,
+  },
+  followedCard: {
+    marginHorizontal: 14,
+    marginBottom: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  favEmptyCard: {
+    marginHorizontal: 14,
+    marginTop: 8,
+    marginBottom: 8,
+    padding: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  favEmptyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  favEmptyText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  favEmptyTitle: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+    marginBottom: 2,
+  },
+  favEmptySub: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 11.5,
+    lineHeight: 16,
   },
 });

@@ -25,7 +25,7 @@ export function ScorersList({ events, teamId }: Props) {
   // Group by player name
   const byPlayer = new Map<string, string[]>();
   for (const e of goals) {
-    const name = e.player_name || 'Óvitað';
+    const name = e.player_name || 'Óþekkt';
     if (!byPlayer.has(name)) byPlayer.set(name, []);
     byPlayer.get(name)!.push(formatMinute(e));
   }

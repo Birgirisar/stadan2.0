@@ -16,7 +16,6 @@ import { useTheme } from '../../../lib/theme/useTheme';
 import { useQuery } from '@tanstack/react-query';
 import { useLeagueMeta, useLeagueStandings } from '../../../lib/hooks/useLeagueDetail';
 import { fetchTopScorers } from '../../../lib/api/teamDetail';
-import { useFollowedLeagues } from '../../../lib/hooks/useFollowedLeagues';
 import { useFixturesByDate } from '../../../lib/api/fixtures';
 import { useLeagueFixtures } from '../../../lib/hooks/useLeagueFixtures';
 import { getLiveTeamIds } from '../../../lib/utils/liveTeams';
@@ -45,9 +44,6 @@ export default function LeagueDetailScreen() {
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const { data: league } = useLeagueMeta(leagueId);
-  const { toggle, isFollowed } = useFollowedLeagues();
-  const followed = isFollowed(leagueId);
-
   // Season selector state
   const currentSeasonId = league?.currentseason?.id ?? league?.currentSeason?.id ?? league?.current_season_id ?? null;
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
@@ -292,30 +288,6 @@ export default function LeagueDetailScreen() {
               </TouchableOpacity>
             ) : null}
 
-            <TouchableOpacity
-              onPress={() => toggle(leagueId)}
-              activeOpacity={0.7}
-              style={[
-                styles.followBtn,
-                followed
-                  ? { backgroundColor: colors.goldSoft, borderColor: colors.gold + '66' }
-                  : { backgroundColor: colors.accentSoft, borderColor: colors.accent + '55' },
-              ]}
-            >
-              <Ionicons
-                name={followed ? 'star' : 'star-outline'}
-                size={14}
-                color={followed ? colors.gold : colors.accent}
-              />
-              <Text
-                style={[
-                  styles.followBtnText,
-                  { color: followed ? colors.gold : colors.accent },
-                ]}
-              >
-                {followed ? 'Fylgist með' : 'Fylgjast'}
-              </Text>
-            </TouchableOpacity>
           </View>
         </BlurView>
       </View>
@@ -378,19 +350,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   seasonPillText: {
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 12,
-  },
-  followBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  followBtnText: {
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
   },

@@ -89,9 +89,9 @@ export function getEventLabel(event: FixtureEvent): { line1Sub: string; iconType
     case EVENT_TYPE.MISSED_PENALTY:
       return { line1Sub: 'Víta klúður', iconType: 'missed-pen' };
     case EVENT_TYPE.YELLOW_CARD:
-      return { line1Sub: 'Gula spjaldið', iconType: 'yellow' };
+      return { line1Sub: 'Gult spjald', iconType: 'yellow' };
     case EVENT_TYPE.RED_CARD:
-      return { line1Sub: 'Rauða spjaldið', iconType: 'red' };
+      return { line1Sub: 'Rautt spjald', iconType: 'red' };
     case EVENT_TYPE.YELLOW_RED:
       return { line1Sub: 'Seinna gula spjaldið', iconType: 'yellow-red' };
     case EVENT_TYPE.SUBSTITUTION:

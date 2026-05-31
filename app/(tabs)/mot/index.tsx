@@ -7,17 +7,13 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../lib/theme/useTheme';
 import { useLeagueDirectory } from '../../../lib/hooks/useLeagueDirectory';
-import { useFollowedLeagues } from '../../../lib/hooks/useFollowedLeagues';
 import { LeagueCard } from '../../../components/mot/LeagueCard';
-import { FollowedSection } from '../../../components/mot/FollowedSection';
 
 export default function MotDirectoryScreen() {
   const { colors, theme, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { summaries, isLoading } = useLeagueDirectory();
-  const { followedIds, isFollowed } = useFollowedLeagues();
-
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
 
   const handleLeaguePress = (leagueId: number) => {
@@ -38,13 +34,6 @@ export default function MotDirectoryScreen() {
         {/* Page title */}
         <Text style={[styles.pageTitle, { color: colors.text }]}>Mót</Text>
 
-        {/* Followed section */}
-        <FollowedSection
-          summaries={summaries}
-          followedIds={followedIds}
-          onPress={handleLeaguePress}
-        />
-
         {/* All leagues section */}
         <View style={styles.sectionHeading}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Allar deildir</Text>
@@ -59,7 +48,6 @@ export default function MotDirectoryScreen() {
             <LeagueCard
               key={s.leagueId}
               summary={s}
-              isFollowed={isFollowed(s.leagueId)}
               onPress={() => handleLeaguePress(s.leagueId)}
             />
           ))

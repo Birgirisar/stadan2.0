@@ -7,11 +7,10 @@ import { formatStartDate } from '../../lib/utils/dates';
 
 interface Props {
   summary: LeagueSummary;
-  isFollowed: boolean;
   onPress: () => void;
 }
 
-export function LeagueCard({ summary, isFollowed, onPress }: Props) {
+export function LeagueCard({ summary, onPress }: Props) {
   const { colors } = useTheme();
   const { name, imagePath, isWomens, currentSeasonYear, seasonState, startingAt, leader, champion, liveCount } = summary;
 
@@ -34,13 +33,6 @@ export function LeagueCard({ summary, isFollowed, onPress }: Props) {
       {/* Red left edge for live leagues */}
       {hasLive && (
         <View style={[styles.liveEdge, { backgroundColor: colors.live }]} />
-      )}
-
-      {/* Gold star for followed leagues */}
-      {isFollowed && (
-        <View style={[styles.followedStar, { backgroundColor: colors.gold }]}>
-          <Ionicons name="star" size={8} color="#fff" />
-        </View>
       )}
 
       {/* League logo */}
