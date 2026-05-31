@@ -161,7 +161,7 @@ export function FixturesList({ fixtures, scrollViewRef, heroFull, compactH }: Pr
                 {fixture.id === anchor?.fixtureId && anchor.type !== 'none' && (
                   <NextMatchLabel type={anchor.type} />
                 )}
-                <MatchRow fixture={fixture} isLast={i === group.fixtures.length - 1} />
+                <MatchRow fixture={fixture} isLast={i === group.fixtures.length - 1} showDate />
               </React.Fragment>
             ))}
           </View>

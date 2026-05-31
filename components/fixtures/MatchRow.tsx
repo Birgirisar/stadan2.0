@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../lib/theme/useTheme';
-import { formatKickoffTime } from '../../lib/utils/dates';
+import { formatKickoffTime, formatMatchDate } from '../../lib/utils/dates';
 import { getScore } from '../../lib/utils/score';
 import { getMatchState, getLiveMinute } from '../../lib/utils/state';
 import type { Fixture } from '../../lib/api/types';
@@ -11,6 +11,7 @@ import { TeamBadge } from './TeamBadge';
 interface Props {
   fixture: Fixture;
   isLast: boolean;
+  showDate?: boolean;
 }
 
 function PulseDot({ color }: { color: string }) {
@@ -34,7 +35,7 @@ function PulseDot({ color }: { color: string }) {
   );
 }
 
-export function MatchRow({ fixture, isLast }: Props) {
+export function MatchRow({ fixture, isLast, showDate }: Props) {
   const { colors } = useTheme();
   const router = useRouter();
 
@@ -68,25 +69,25 @@ export function MatchRow({ fixture, isLast }: Props) {
           ) : (
             <PulseDot color={colors.live} />
           )
-        ) : stateResult.label ? (
-          <Text
-            style={[
-              styles.statusText,
-              {
-                color:
-                  stateResult.type === 'halftime'
-                    ? colors.textMuted
-                    : stateResult.type === 'finished'
-                    ? colors.textMuted
-                    : stateResult.type === 'cancelled'
-                    ? colors.live
-                    : colors.textMuted,
-              },
-            ]}
-          >
-            {stateResult.label}
-          </Text>
-        ) : null}
+        ) : (
+          <View style={styles.statusStack}>
+            {showDate && (
+              <Text style={[styles.dateText, { color: colors.textMuted }]} numberOfLines={1}>
+                {formatMatchDate(fixture.starting_at)}
+              </Text>
+            )}
+            {stateResult.label ? (
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: stateResult.type === 'cancelled' ? colors.live : colors.textMuted },
+                ]}
+              >
+                {stateResult.label}
+              </Text>
+            ) : null}
+          </View>
+        )}
       </View>
 
       {/* Home team — flex 1, right-aligned */}
@@ -150,11 +151,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  statusStack: {
+    alignItems: 'center',
+    gap: 2,
+  },
   statusText: {
     fontFamily: 'Manrope_700Bold',
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+  },
+  dateText: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 9,
+    textAlign: 'center',
+    letterSpacing: 0.1,
   },
   teamHome: {
     flex: 1,
