@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Animated,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -13,11 +14,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme/useTheme';
 import { useTeamDetail } from '../../lib/hooks/useTeamDetail';
+import { useTeamFixtures } from '../../lib/hooks/useTeamFixtures';
 import { useFollowedTeams } from '../../lib/hooks/useFollowedTeams';
 import { LEAGUES } from '../../constants/leagues';
 import { TeamBadge } from '../../components/fixtures/TeamBadge';
 import { TeamHeader } from '../../components/team-detail/TeamHeader';
 import { TeamSubTabs, type TeamSubTabId } from '../../components/team-detail/SubTabs';
+import { TeamLeikirTab } from '../../components/team-detail/leikir/TeamLeikirTab';
 import { NextMatchCard } from '../../components/team-detail/NextMatchCard';
 import { LastMatchCard } from '../../components/team-detail/LastMatchCard';
 import { RecentFormGrid } from '../../components/team-detail/RecentFormGrid';
@@ -52,6 +55,7 @@ export default function TeamDetailScreen() {
   // ── Data ──────────────────────────────────────────────────────────────────
   const {
     team,
+    seasonId,
     leagueId,
     nextMatch,
     lastMatch,
@@ -74,6 +78,18 @@ export default function TeamDetailScreen() {
   // Measured height of the TeamHeader block (crest + name + meta chips).
   // Initialised to an estimate so layout is stable on first paint.
   const [teamHeaderH, setTeamHeaderH] = useState(TEAM_HEADER_ESTIMATE);
+
+  // Ref for the outer scroll view — used by TeamLeikirTab to auto-scroll to anchor
+  const scrollViewRef = useRef<any>(null);
+
+  // ── Leikir tab data — only fetched when that tab is active ────────────────
+  const {
+    fixtures: leikirFixtures,
+    isLoading: leikirLoading,
+    error: leikirError,
+    refetch: refetchLeikir,
+    isRefetching: leikirRefetching,
+  } = useTeamFixtures(teamId, activeTab === 'leikir' ? (seasonId ?? undefined) : undefined);
 
   // Full hero height (expanded) and collapse range derived from measurement.
   const heroFull = COMPACT_H + teamHeaderH;
@@ -265,6 +281,7 @@ export default function TeamDetailScreen() {
 
       {/* ── Scrollable content — starts below the full (expanded) hero ───── */}
       <Animated.ScrollView
+        ref={scrollViewRef}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         contentContainerStyle={[
@@ -272,6 +289,15 @@ export default function TeamDetailScreen() {
           { paddingTop: heroFull, paddingBottom: insets.bottom + 110 },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          activeTab === 'leikir' ? (
+            <RefreshControl
+              refreshing={leikirRefetching}
+              onRefresh={refetchLeikir}
+              tintColor={colors.textMuted}
+            />
+          ) : undefined
+        }
       >
         {/* ── Yfirlit tab ──────────────────────────────────────────────── */}
         {activeTab === 'yfirlit' && (
@@ -292,8 +318,22 @@ export default function TeamDetailScreen() {
           />
         )}
 
+        {/* ── Leikir tab ───────────────────────────────────────────────── */}
+        {activeTab === 'leikir' && (
+          <TeamLeikirTab
+            seasonId={seasonId}
+            fixtures={leikirFixtures}
+            isLoading={leikirLoading}
+            error={leikirError}
+            onRetry={refetchLeikir}
+            scrollViewRef={scrollViewRef}
+            heroFull={heroFull}
+            compactH={COMPACT_H}
+          />
+        )}
+
         {/* ── Placeholder tabs ─────────────────────────────────────────── */}
-        {activeTab !== 'yfirlit' && <PlaceholderContent />}
+        {activeTab !== 'yfirlit' && activeTab !== 'leikir' && <PlaceholderContent />}
       </Animated.ScrollView>
     </View>
   );

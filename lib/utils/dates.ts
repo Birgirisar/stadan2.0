@@ -9,6 +9,10 @@ const FULL_NAMES = [
   'Laugardagur',
 ];
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'maí', 'jún', 'júl', 'ágú', 'sep', 'okt', 'nóv', 'des'];
+const MONTHS_CAPITALIZED = [
+  'Janúar', 'Febrúar', 'Mars', 'Apríl', 'Maí', 'Júní',
+  'Júlí', 'Ágúst', 'September', 'Október', 'Nóvember', 'Desember',
+];
 
 export function toDateString(date: Date): string {
   const y = date.getFullYear();
@@ -86,4 +90,31 @@ export function isSameDay(a: Date, b: Date): boolean {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
+}
+
+// Returns "Maí 2025", "Júní 2026" etc. — for month section headers in fixture lists.
+export function formatMonthYear(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    const tz = 'Atlantic/Reykjavik';
+    const monthStr = date.toLocaleDateString('en-CA', { month: '2-digit', timeZone: tz });
+    const year = date.toLocaleDateString('en-CA', { year: 'numeric', timeZone: tz });
+    return `${MONTHS_CAPITALIZED[parseInt(monthStr, 10) - 1]} ${year}`;
+  } catch {
+    return '';
+  }
+}
+
+// Returns "YYYY-MM" key for grouping fixtures by month in Reykjavik time.
+export function getMonthKey(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleDateString('en-CA', {
+      year: 'numeric',
+      month: '2-digit',
+      timeZone: 'Atlantic/Reykjavik',
+    }).slice(0, 7);
+  } catch {
+    return '';
+  }
 }
