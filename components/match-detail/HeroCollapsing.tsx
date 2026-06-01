@@ -12,9 +12,34 @@ import { TeamBadge } from '../fixtures/TeamBadge';
 import { ScorersList } from './ScorersList';
 import { SubTabs, type SubTabId } from './SubTabs';
 import { getAvailableSubTabs } from '../../lib/utils/matchSubTabs';
+import { EVENT_TYPE } from '../../lib/utils/events';
 import { LEAGUES } from '@/constants/leagues';
 
 export const HERO_SUBTABS_H = 46;
+
+function RedCardStack({ count, size = 'large' }: { count: number; size?: 'large' | 'small' }) {
+  if (count === 0) return null;
+  const w = size === 'large' ? 8 : 6;
+  const h = size === 'large' ? 11 : 9;
+  const r = size === 'large' ? 1.5 : 1;
+  const overlap = size === 'large' ? -3 : -2;
+  return (
+    <View style={{ flexDirection: 'row' }}>
+      {Array.from({ length: count }, (_, i) => (
+        <View
+          key={i}
+          style={{
+            width: w,
+            height: h,
+            borderRadius: r,
+            backgroundColor: '#d63031',
+            marginLeft: i > 0 ? overlap : 0,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
 const COMPACT_CONTENT_H = 52;
 
 interface Props {
@@ -55,6 +80,15 @@ export function HeroCollapsing({
   const stateResult = getMatchState(fixture.state);
   const isPending = stateResult.type === 'pending';
   const liveMinute = getLiveMinute(fixture.periods);
+
+  const homeRedCards = (fixture.events ?? []).filter(
+    (e) => (e.type_id === EVENT_TYPE.RED_CARD || e.type_id === EVENT_TYPE.YELLOW_RED) &&
+      e.participant_id === home?.id,
+  ).length;
+  const awayRedCards = (fixture.events ?? []).filter(
+    (e) => (e.type_id === EVENT_TYPE.RED_CARD || e.type_id === EVENT_TYPE.YELLOW_RED) &&
+      e.participant_id === away?.id,
+  ).length;
 
   const leagueName = fixture.league?.name ?? '';
   const leagueInfo = LEAGUES[fixture.league_id as keyof typeof LEAGUES];
@@ -174,11 +208,15 @@ export function HeroCollapsing({
               {formatKickoffTime(fixture.starting_at)}
             </Text>
           ) : (
-            <Text style={[styles.compactScore, { color: colors.text }]}>
-              {score.home ?? '-'}
-              <Text style={{ color: colors.textMuted }}>{'–'}</Text>
-              {score.away ?? '-'}
-            </Text>
+            <View style={styles.compactScoreRow}>
+              <RedCardStack count={homeRedCards} size="small" />
+              <Text style={[styles.compactScore, { color: colors.text }]}>
+                {score.home ?? '-'}
+                <Text style={{ color: colors.textMuted }}>{'–'}</Text>
+                {score.away ?? '-'}
+              </Text>
+              <RedCardStack count={awayRedCards} size="small" />
+            </View>
           )}
           <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} size={26} />
         </View>
@@ -197,6 +235,12 @@ export function HeroCollapsing({
           <Pressable style={styles.teamCrestCell} onPress={() => goToTeam(home?.id)} hitSlop={8}>
             <TeamBadge imageUrl={home?.image_path ?? ''} shortCode={home?.short_code ?? ''} size={48} />
           </Pressable>
+
+          {/* Fixed-width columns keep the center cell perfectly centred regardless of cards */}
+          <View style={styles.cardColHome}>
+            <RedCardStack count={homeRedCards} />
+          </View>
+
           <Animated.View style={[styles.scoreCenterCell, { transform: [{ scale: scoreScale }] }]}>
             {isPending ? (
               <Text style={[styles.scoreValue, { color: colors.text }]}>
@@ -210,6 +254,11 @@ export function HeroCollapsing({
               </View>
             )}
           </Animated.View>
+
+          <View style={styles.cardColAway}>
+            <RedCardStack count={awayRedCards} />
+          </View>
+
           <Pressable style={styles.teamCrestCell} onPress={() => goToTeam(away?.id)} hitSlop={8}>
             <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} size={48} />
           </Pressable>
@@ -334,6 +383,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  compactScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+  },
   compactScore: {
     fontFamily: 'BricolageGrotesque_800ExtraBold',
     fontSize: 20,
@@ -381,6 +435,16 @@ const styles = StyleSheet.create({
   scoreCenterCell: {
     width: 100,
     alignItems: 'center',
+  },
+  cardColHome: {
+    width: 32,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  cardColAway: {
+    width: 32,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   statusCell: {
     width: 100,

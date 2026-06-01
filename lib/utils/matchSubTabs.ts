@@ -40,7 +40,6 @@ export function getAvailableSubTabs(
 
   const tabs: SubTabDef[] = [
     { id: 'yfirlit', label: 'Yfirlit' },
-    { id: 'lysing', label: 'Lýsing' },
     { id: 'lidin', label: 'Liðin' },
   ];
 
@@ -48,11 +47,11 @@ export function getAvailableSubTabs(
     tabs.push({ id: 'tafla', label: 'Tafla' });
   }
 
+  tabs.push({ id: 'innbyrðis', label: 'Innbyrðis' });
+
   if (isLiveOrFinished) {
     tabs.push({ id: 'tolfraedi', label: 'Tölfræði' });
   }
-
-  tabs.push({ id: 'innbyrðis', label: 'Innbyrðis' });
 
   return tabs;
 }
