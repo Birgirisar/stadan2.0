@@ -45,7 +45,7 @@ export async function fetchRoundsForSeason(seasonId: number): Promise<RoundFull[
  */
 export async function fetchFixturesForRound(roundId: number): Promise<Fixture[]> {
   const round = await smGet<RoundFixturesResponse>(`/rounds/${roundId}`, {
-    include: 'fixtures.participants;fixtures.scores;fixtures.state;fixtures.league',
+    include: 'fixtures.participants;fixtures.scores;fixtures.state;fixtures.league;fixtures.events',
   });
 
   const fixtures: Fixture[] = Array.isArray(round?.fixtures) ? round.fixtures : [];

@@ -67,6 +67,7 @@ export interface Fixture {
   league?: League;
   round?: Round;
   periods?: Period[];
+  events?: FixtureEvent[];
 }
 
 export interface SportmonksResponse<T> {

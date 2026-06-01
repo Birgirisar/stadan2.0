@@ -5,6 +5,7 @@ import { useTheme } from '../../lib/theme/useTheme';
 import { formatKickoffTime, formatMatchDate } from '../../lib/utils/dates';
 import { getScore } from '../../lib/utils/score';
 import { getMatchState, getLiveMinute } from '../../lib/utils/state';
+import { EVENT_TYPE } from '../../lib/utils/events';
 import type { Fixture } from '../../lib/api/types';
 import { TeamBadge } from './TeamBadge';
 
@@ -47,6 +48,16 @@ export function MatchRow({ fixture, isLast, showDate }: Props) {
 
   const homeIsLoser = false;
   const awayIsLoser = false;
+
+  const homeRedCards = (fixture.events ?? []).filter(
+    (e) => (e.type_id === EVENT_TYPE.RED_CARD || e.type_id === EVENT_TYPE.YELLOW_RED) &&
+      e.participant_id === home?.id,
+  ).length;
+  const awayRedCards = (fixture.events ?? []).filter(
+    (e) => (e.type_id === EVENT_TYPE.RED_CARD || e.type_id === EVENT_TYPE.YELLOW_RED) &&
+      e.participant_id === away?.id,
+  ).length;
+  const hasRedCards = stateResult.showScore && (homeRedCards > 0 || awayRedCards > 0);
 
   return (
     <Pressable
@@ -104,11 +115,34 @@ export function MatchRow({ fixture, isLast, showDate }: Props) {
       {/* Center — 54px */}
       <View style={styles.centerCol}>
         {stateResult.showScore ? (
-          <Text style={[styles.score, { color: colors.text }]}>
-            {score.home ?? '-'}
-            <Text style={{ color: colors.textMuted }}> – </Text>
-            {score.away ?? '-'}
-          </Text>
+          <View style={styles.scoreWithCards}>
+            {/* Home digit — card floats above it */}
+            <View style={styles.digitCol}>
+              {hasRedCards && (homeRedCards > 0
+                ? <View style={styles.tinyCardRow}>
+                    {Array.from({ length: homeRedCards }, (_, i) => (
+                      <View key={i} style={[styles.tinyCard, i > 0 && styles.tinyCardOverlap]} />
+                    ))}
+                  </View>
+                : <View style={styles.cardSpacer} />
+              )}
+              <Text style={[styles.score, { color: colors.text }]}>{score.home ?? '-'}</Text>
+            </View>
+            {/* Dash */}
+            <Text style={[styles.score, { color: colors.textMuted }]}> – </Text>
+            {/* Away digit — card floats above it */}
+            <View style={styles.digitCol}>
+              {hasRedCards && (awayRedCards > 0
+                ? <View style={styles.tinyCardRow}>
+                    {Array.from({ length: awayRedCards }, (_, i) => (
+                      <View key={i} style={[styles.tinyCard, i > 0 && styles.tinyCardOverlap]} />
+                    ))}
+                  </View>
+                : <View style={styles.cardSpacer} />
+              )}
+              <Text style={[styles.score, { color: colors.text }]}>{score.away ?? '-'}</Text>
+            </View>
+          </View>
         ) : stateResult.type === 'pending' ? (
           <Text style={[styles.time, { color: colors.textSecondary }]}>
             {formatKickoffTime(fixture.starting_at)}
@@ -221,5 +255,28 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 12.5,
     letterSpacing: -0.2,
+  },
+  scoreWithCards: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  digitCol: {
+    alignItems: 'center',
+  },
+  tinyCardRow: {
+    flexDirection: 'row',
+    marginBottom: 2,
+  },
+  tinyCard: {
+    width: 5,
+    height: 7,
+    borderRadius: 1,
+    backgroundColor: '#d63031',
+  },
+  tinyCardOverlap: {
+    marginLeft: -2,
+  },
+  cardSpacer: {
+    height: 9,
   },
 });
