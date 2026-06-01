@@ -208,15 +208,11 @@ export function HeroCollapsing({
               {formatKickoffTime(fixture.starting_at)}
             </Text>
           ) : (
-            <View style={styles.compactScoreRow}>
-              <RedCardStack count={homeRedCards} size="small" />
-              <Text style={[styles.compactScore, { color: colors.text }]}>
-                {score.home ?? '-'}
-                <Text style={{ color: colors.textMuted }}>{'–'}</Text>
-                {score.away ?? '-'}
-              </Text>
-              <RedCardStack count={awayRedCards} size="small" />
-            </View>
+            <Text style={[styles.compactScore, { color: colors.text }]}>
+              {score.home ?? '-'}
+              <Text style={{ color: colors.textMuted }}>{'–'}</Text>
+              {score.away ?? '-'}
+            </Text>
           )}
           <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} size={26} />
         </View>
@@ -385,11 +381,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  compactScoreRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 4,
   },
   compactScore: {
     fontFamily: 'BricolageGrotesque_800ExtraBold',

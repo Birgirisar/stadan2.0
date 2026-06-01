@@ -144,7 +144,7 @@ export default function TeamDetailScreen() {
   if (teamLoading && !team) {
     return (
       <View style={[styles.center, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
-        <ActivityIndicator color={colors.accent} size="large" />
+        <ActivityIndicator color={colors.textMuted} size="large" />
       </View>
     );
   }

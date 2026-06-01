@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../lib/theme/useTheme';
 import type { SubTabId, SubTabDef } from '../../lib/utils/matchSubTabs';
 
@@ -35,56 +35,46 @@ export function SubTabs({ activeTab, onTabChange, tabs, isPending = false }: Pro
   const displayTabs = tabs ?? (isPending
     ? ALL_TABS.filter((t) => PENDING_TAB_IDS.includes(t.id))
     : ALL_TABS);
-  const scrollRef = useRef<ScrollView>(null);
 
   return (
     <View style={[styles.wrapper, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        bounces={false}
-      >
-        {displayTabs.map((tab) => {
-          const active = tab.id === activeTab;
-          return (
-            <TouchableOpacity
-              key={tab.id}
-              onPress={() => onTabChange(tab.id)}
-              activeOpacity={0.7}
-              style={styles.tab}
+      {displayTabs.map((tab) => {
+        const active = tab.id === activeTab;
+        return (
+          <TouchableOpacity
+            key={tab.id}
+            onPress={() => onTabChange(tab.id)}
+            activeOpacity={0.7}
+            style={styles.tab}
+          >
+            <Text
+              style={[
+                styles.label,
+                { color: active ? colors.text : colors.textMuted },
+                active && styles.labelActive,
+              ]}
             >
-              <Text
-                style={[
-                  styles.label,
-                  { color: active ? colors.text : colors.textMuted },
-                  active && styles.labelActive,
-                ]}
-              >
-                {tab.label}
-              </Text>
-              {active && (
-                <View style={[styles.indicator, { backgroundColor: colors.text }]} />
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+              {tab.label}
+            </Text>
+            {active && (
+              <View style={[styles.indicator, { backgroundColor: colors.text }]} />
+            )}
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
+    flexDirection: 'row',
     borderTopWidth: 0,
     borderBottomWidth: 1,
   },
-  scrollContent: {
-    paddingHorizontal: 10,
-  },
   tab: {
-    paddingHorizontal: 14,
+    flex: 1,
+    alignItems: 'center',
     paddingTop: 13,
     paddingBottom: 12,
     position: 'relative',
@@ -100,8 +90,8 @@ const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',
     bottom: 0,
-    left: 14,
-    right: 14,
+    left: 12,
+    right: 12,
     height: 2.5,
     borderRadius: 2,
   },

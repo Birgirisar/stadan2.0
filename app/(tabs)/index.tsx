@@ -132,14 +132,6 @@ export default function LeikirScreen() {
       groups = allGroups.filter((g) => [345, 348, 351].includes(g.leagueId));
     } else if (activeFilter === 'female') {
       groups = allGroups.filter((g) => [1710, 1711].includes(g.leagueId));
-    } else if (activeFilter === 'favorites') {
-      // Show only followed fixtures, still grouped by league
-      return allGroups
-        .map((g) => ({
-          ...g,
-          fixtures: g.fixtures.filter((f) => followedFixtureIds.has(f.id)),
-        }))
-        .filter((g) => g.fixtures.length > 0);
     } else {
       groups = allGroups;
     }
@@ -157,7 +149,7 @@ export default function LeikirScreen() {
     return groups;
   }, [allGroups, activeFilter, followedFixtureIds]);
 
-  const showFollowedSection = activeFilter !== 'favorites' && followedFixtures.length > 0;
+  const showFollowedSection = followedFixtures.length > 0;
 
   const totalCount =
     filteredGroups.reduce((sum, g) => sum + g.fixtures.length, 0) +
@@ -229,52 +221,7 @@ export default function LeikirScreen() {
           </View>
         )}
 
-        {/* Favorites chip: no follows at all */}
-        {!isLoading && !error && activeFilter === 'favorites' && !hasFollows && (
-          <View
-            style={[
-              styles.favEmptyCard,
-              { backgroundColor: colors.surface, borderColor: colors.borderStrong },
-            ]}
-          >
-            <View style={[styles.favEmptyIcon, { backgroundColor: colors.surfaceSunken }]}>
-              <Ionicons name="star-outline" size={18} color={colors.textMuted} />
-            </View>
-            <View style={styles.favEmptyText}>
-              <Text style={[styles.favEmptyTitle, { color: colors.text }]}>
-                Þú fylgist ekki með neinu
-              </Text>
-              <Text style={[styles.favEmptySub, { color: colors.textMuted }]}>
-                Smelltu á „Fylgjast" í lið eða deild til að bæta hér við.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Favorites chip: has follows but no matched fixtures today */}
-        {!isLoading && !error && activeFilter === 'favorites' && hasFollows && filteredGroups.length === 0 && (
-          <View
-            style={[
-              styles.favEmptyCard,
-              { backgroundColor: colors.surface, borderColor: colors.borderStrong },
-            ]}
-          >
-            <View style={[styles.favEmptyIcon, { backgroundColor: colors.surfaceSunken }]}>
-              <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
-            </View>
-            <View style={styles.favEmptyText}>
-              <Text style={[styles.favEmptyTitle, { color: colors.text }]}>
-                Engir fylgst-leikir í dag
-              </Text>
-              <Text style={[styles.favEmptySub, { color: colors.textMuted }]}>
-                Prófaðu annan dag eða farðu í Allir leikir.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Generic empty state (non-favorites) */}
-        {!isLoading && !error && activeFilter !== 'favorites' && filteredGroups.length === 0 && !showFollowedSection && (
+        {!isLoading && !error && filteredGroups.length === 0 && !showFollowedSection && (
           <View style={styles.center}>
             <Text style={[styles.msgText, { color: colors.textMuted }]}>
               {activeFilter === 'live' ? 'Engir leikir í beinni' : 'Engir leikir í dag'}

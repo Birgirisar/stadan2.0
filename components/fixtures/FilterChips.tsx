@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../lib/theme/useTheme';
 
-export type FilterType = 'all' | 'live' | 'favorites' | 'male' | 'female';
+export type FilterType = 'all' | 'live' | 'male' | 'female';
 
 interface Props {
   active: FilterType;
@@ -31,7 +31,6 @@ function LiveDot({ color }: { color: string }) {
 const CHIPS: Array<{ id: FilterType; label: string }> = [
   { id: 'all', label: 'Allir leikir' },
   { id: 'live', label: 'Í beinni' },
-  { id: 'favorites', label: 'Uppáhald' },
   { id: 'male', label: 'Karla' },
   { id: 'female', label: 'Kvenna' },
 ];

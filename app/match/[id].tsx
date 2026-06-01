@@ -129,7 +129,7 @@ export default function MatchDetailScreen() {
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
-        <ActivityIndicator color={colors.accent} size="large" />
+        <ActivityIndicator color={colors.textMuted} size="large" />
       </View>
     );
   }
