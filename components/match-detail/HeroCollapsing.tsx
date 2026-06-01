@@ -271,6 +271,7 @@ export function HeroCollapsing({
               {home?.name ?? ''}
             </Text>
           </Pressable>
+          <View style={styles.cardColHome} />
           <View style={styles.statusCell}>
             {isPending && fixture.starting_at ? (
               <Text style={[styles.pendingDate, { color: colors.textMuted }]}>
@@ -299,6 +300,7 @@ export function HeroCollapsing({
               )
             )}
           </View>
+          <View style={styles.cardColAway} />
           <Pressable style={styles.teamNameCell} onPress={() => goToTeam(away?.id)}>
             <Text style={[styles.teamLabel, { color: colors.text }]} numberOfLines={2}>
               {away?.name ?? ''}
@@ -312,10 +314,11 @@ export function HeroCollapsing({
             <View style={styles.scorersCell}>
               {home && <ScorersList events={fixture.events} teamId={home.id} />}
             </View>
-            {/* <View style={styles.scorersSpacer} /> */}
+            <View style={styles.cardColHome} />
             <View style={styles.scorersSpacer}>
               <Ionicons name="football" size={14} color={colors.textMuted} />
             </View>
+            <View style={styles.cardColAway} />
             <View style={styles.scorersCell}>
               {away && <ScorersList events={fixture.events} teamId={away.id} />}
             </View>

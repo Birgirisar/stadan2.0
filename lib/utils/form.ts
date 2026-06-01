@@ -4,6 +4,7 @@ import { getScore } from './score';
 export type FormResult = 'W' | 'D' | 'L';
 
 export interface FormEntry {
+  fixtureId: number;
   result: FormResult;
   homeGoals: number;
   awayGoals: number;
@@ -38,6 +39,6 @@ export function computeForm(fixtures: Fixture[], teamId: number): FormEntry[] {
       result = 'L';
     }
 
-    return { result, homeGoals: hg, awayGoals: ag, homeTeam: home, awayTeam: away, isTargetHome };
+    return { fixtureId: fixture.id, result, homeGoals: hg, awayGoals: ag, homeTeam: home, awayTeam: away, isTargetHome };
   });
 }

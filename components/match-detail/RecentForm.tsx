@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import type { Fixture } from '../../lib/api/types';
 import { computeForm, type FormEntry } from '../../lib/utils/form';
 import { useTheme } from '../../lib/theme/useTheme';
@@ -65,6 +66,8 @@ interface CellProps {
 }
 
 function FormRowCell({ entry, loading, colors }: CellProps) {
+  const router = useRouter();
+
   if (loading || !entry) {
     return (
       <View style={[styles.cellSkeleton, { backgroundColor: colors.surfaceSunken }]} />
@@ -75,7 +78,10 @@ function FormRowCell({ entry, loading, colors }: CellProps) {
     entry.result === 'W' ? colors.win : entry.result === 'L' ? colors.loss : colors.draw;
 
   return (
-    <View style={styles.cell}>
+    <Pressable
+      style={({ pressed }) => [styles.cell, pressed && { opacity: 0.6 }]}
+      onPress={() => router.push(`/match/${entry.fixtureId}` as any)}
+    >
       <TeamBadge
         imageUrl={entry.homeTeam.image_path}
         shortCode={entry.homeTeam.short_code}
@@ -91,7 +97,7 @@ function FormRowCell({ entry, loading, colors }: CellProps) {
         shortCode={entry.awayTeam.short_code}
         size={24}
       />
-    </View>
+    </Pressable>
   );
 }
 

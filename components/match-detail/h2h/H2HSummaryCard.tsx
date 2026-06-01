@@ -1,9 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../../lib/theme/useTheme';
-import { getTeamPrimaryColor } from '../../../lib/constants/teamColors';
 import type { H2HSummary } from '../../../lib/utils/h2h';
 import type { Participant } from '../../../lib/api/types';
+
+const HOME_BADGE_COLOR = '#4B7BEC';
+const AWAY_BADGE_COLOR = '#778CA3';
 
 interface Props {
   summary: H2HSummary;
@@ -20,8 +22,8 @@ export function H2HSummaryCard({ summary, homeTeam, awayTeam }: Props) {
   const drawRatio = total > 0 ? draws / total : 0;
   const awayRatio = total > 0 ? awayWins / total : 0;
 
-  const homeBadgeColor = getTeamPrimaryColor(homeTeam.id) ?? colors.accent;
-  const awayBadgeColor = getTeamPrimaryColor(awayTeam.id) ?? colors.loss;
+  const homeBadgeColor = HOME_BADGE_COLOR;
+  const awayBadgeColor = AWAY_BADGE_COLOR;
 
   // Shorten name to first word if it's long so the label fits in one line
   const homeLabel = `${firstWord(homeTeam.name)} sigur`;
