@@ -124,6 +124,17 @@ function extractFixtures(stages: ScheduleStage[]): {
   };
 }
 
+// Sportmonks standing detail type_id constants
+const DETAIL_TYPE = {
+  PLAYED: 129,
+  WON: 130,
+  DRAW: 131,
+  LOST: 132,
+  GOALS_FOR: 133,
+  GOALS_AGAINST: 134,
+  POINTS: 187,
+} as const;
+
 function extractSeasonStats(
   standings: StandingRow[] | null,
   teamId: number
@@ -131,40 +142,23 @@ function extractSeasonStats(
   if (!standings) return null;
 
   const row = standings.find(
-    (r) =>
-      (r.participant_id ?? r.team_id ?? r.participant?.id) === teamId
+    (r) => (r.participant_id ?? r.team_id ?? r.participant?.id) === teamId
   );
   if (!row) return null;
 
-  // Try to pull stats from details array first, then direct fields
-  function getDetail(keys: string[]): number {
-    if (row!.details) {
-      for (const d of row!.details) {
-        const devName = (d.type?.developer_name ?? '').toUpperCase();
-        const code = (d.type?.code ?? '').toLowerCase();
-        for (const key of keys) {
-          if (devName.includes(key.toUpperCase()) || code.includes(key.toLowerCase())) {
-            return d.value ?? 0;
-          }
-        }
-      }
-    }
-    return 0;
+  function getDetail(typeId: number): number {
+    return row!.details?.find((d: any) => d.type_id === typeId)?.value ?? 0;
   }
 
-  const played = getDetail(['overall_matches_played', 'matches_played']) ||
-    (row as any).overall_matches_played || (row as any).played || 0;
-  const won = getDetail(['overall_won', 'won']) || (row as any).overall_won || (row as any).won || 0;
-  const draw = getDetail(['overall_draw', 'draw']) || (row as any).overall_draw || (row as any).draw || 0;
-  const lost = getDetail(['overall_lost', 'lost']) || (row as any).overall_lost || (row as any).lost || 0;
-  const goalsFor = getDetail(['overall_goals_scored', 'goals_scored']) ||
-    (row as any).overall_goals_scored || (row as any).goals_scored || 0;
-  const goalsAgainst = getDetail(['overall_goals_against', 'goals_against']) ||
-    (row as any).overall_goals_against || (row as any).goals_against || 0;
-  const points = getDetail(['overall_points', 'points']) ||
-    (row as any).overall_points || (row as any).points || 0;
-
-  return { played, won, draw, lost, goalsFor, goalsAgainst, points };
+  return {
+    played: getDetail(DETAIL_TYPE.PLAYED),
+    won: getDetail(DETAIL_TYPE.WON),
+    draw: getDetail(DETAIL_TYPE.DRAW),
+    lost: getDetail(DETAIL_TYPE.LOST),
+    goalsFor: getDetail(DETAIL_TYPE.GOALS_FOR),
+    goalsAgainst: getDetail(DETAIL_TYPE.GOALS_AGAINST),
+    points: getDetail(DETAIL_TYPE.POINTS) || (row as any).points || 0,
+  };
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────

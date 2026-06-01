@@ -22,7 +22,7 @@ export function SeasonStatsGrid({ stats }: Props) {
     { label: 'Jafntefli', value: stats.draw },
     { label: 'Töp', value: stats.lost },
     { label: 'Mörk', value: stats.goalsFor, accent: true },
-    { label: 'Á sig', value: stats.goalsAgainst },
+    { label: 'Mörk á sig', value: stats.goalsAgainst },
   ];
 
   return (
