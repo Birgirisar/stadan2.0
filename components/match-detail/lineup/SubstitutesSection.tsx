@@ -1,7 +1,9 @@
 import React, { memo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { LineupEntry, FixtureEvent, Participant } from '../../../lib/api/types';
-import { getSubOnInfo, getSubStatusIcons, isValidPlayerImage, type StatusIconType } from '../../../lib/utils/lineup';
+import { getSubOnInfo, getPlayerStatusIcons, isValidPlayerImage, type StatusIconType } from '../../../lib/utils/lineup';
 import { useTheme } from '../../../lib/theme/useTheme';
 
 interface Props {
@@ -104,7 +106,10 @@ const SubRow = memo(function SubRow({
   const effectivePlayerId = entry.player_id || entry.player?.id || 0;
   const playerName = entry.player_name ?? entry.player?.name ?? null;
   const subOn = isPredicted ? null : getSubOnInfo(effectivePlayerId, playerName, events);
-  const cardIcons = isPredicted ? [] : getSubStatusIcons(effectivePlayerId, playerName, events);
+  const allIcons = isPredicted ? [] : getPlayerStatusIcons(effectivePlayerId, playerName, events);
+  const cardIcons = allIcons.filter(i => i === 'yellow' || i === 'red') as Array<'yellow' | 'red'>;
+  const goals = allIcons.filter(i => i === 'goal' || i === 'own-goal') as Array<'goal' | 'own-goal'>;
+  const assists = allIcons.filter(i => i === 'assist');
   const imageUri = entry.player?.image_path;
   const showImage = isValidPlayerImage(imageUri) && !imgError;
   const num = entry.jersey_number;
@@ -155,6 +160,27 @@ const SubRow = memo(function SubRow({
           <View style={styles.cardStack}>
             {cardIcons.map((icon, i) => (
               <CardBadge key={i} type={icon} />
+            ))}
+          </View>
+        )}
+
+        {/* Assist badge */}
+        {assists.length > 0 && (
+          <View style={styles.assistIcon}>
+            <MaterialCommunityIcons name="shoe-cleat" size={13} color="#111" />
+          </View>
+        )}
+
+        {/* Goal badges */}
+        {goals.length > 0 && (
+          <View style={styles.goalGroup}>
+            {goals.map((type, i) => (
+              <View
+                key={i}
+                style={[styles.goalIcon, i > 0 && styles.goalOverlap, type === 'own-goal' && styles.goalIconOwnGoal]}
+              >
+                <Ionicons name="football-outline" size={11} color={type === 'own-goal' ? '#fff' : '#111'} />
+              </View>
             ))}
           </View>
         )}
@@ -331,6 +357,49 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 1,
     elevation: 2,
+  },
+  assistIcon: {
+    position: 'absolute',
+    bottom: -3,
+    left: -3,
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.4,
+    shadowRadius: 1,
+    elevation: 2,
+  },
+  goalGroup: {
+    position: 'absolute',
+    bottom: -3,
+    right: -3,
+    flexDirection: 'row',
+    zIndex: 3,
+  },
+  goalIcon: {
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.4,
+    shadowRadius: 1,
+    elevation: 2,
+  },
+  goalIconOwnGoal: {
+    backgroundColor: '#d63031',
+  },
+  goalOverlap: {
+    marginLeft: -4,
   },
   nameLine: {
     flexDirection: 'row',

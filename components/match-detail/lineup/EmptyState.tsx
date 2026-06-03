@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../lib/theme/useTheme';
 
-export function EmptyState() {
+export function EmptyState({ isPending }: { isPending: boolean }) {
   const { colors } = useTheme();
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.borderStrong }]}>
@@ -11,9 +11,11 @@ export function EmptyState() {
         <Ionicons name="people-outline" size={22} color={colors.textMuted} />
       </View>
       <Text style={[styles.title, { color: colors.text }]}>Liðin ekki tiltæk</Text>
-      <Text style={[styles.sub, { color: colors.textMuted }]}>
-        Staðfest lið birtast um klukkutíma fyrir leik.
-      </Text>
+      {isPending && (
+        <Text style={[styles.sub, { color: colors.textMuted }]}>
+          Staðfest lið birtast um klukkutíma fyrir leik.
+        </Text>
+      )}
     </View>
   );
 }

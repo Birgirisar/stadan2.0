@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import type { DetailedFixture, LineupEntry } from '../../../lib/api/types';
+import { getMatchState } from '../../../lib/utils/state';
 import { splitLineup, getTeamColor } from '../../../lib/utils/lineup';
 import { deriveFormation } from '../../../lib/utils/pitchLayout';
 import { EmptyState } from './EmptyState';
@@ -28,7 +29,8 @@ export function LineupTab({ fixture }: Props) {
   const events = fixture.events ?? [];
 
   if (result.state === 'empty') {
-    return <EmptyState />;
+    const isPending = getMatchState(fixture.state).type === 'pending';
+    return <EmptyState isPending={isPending} />;
   }
 
   const homeFormation = result.home.formation || deriveFormation(result.home.starters);
