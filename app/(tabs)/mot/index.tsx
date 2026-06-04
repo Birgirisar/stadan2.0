@@ -86,6 +86,7 @@ export default function MotDirectoryScreen() {
                 />
               </TouchableOpacity>
               <TouchableOpacity
+                onPress={() => router.push('/stillingar' as any)}
                 style={[styles.iconBtn, { backgroundColor: `rgba(${colors.bgRgb}, 0.6)`, borderColor: colors.border }]}
                 activeOpacity={0.7}
               >

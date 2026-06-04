@@ -56,6 +56,7 @@ export function DaySelector({ selectedDate, today, onSelect }: Props) {
             <Text
               style={[
                 styles.dayLabel,
+                isToday && styles.dayLabelToday,
                 {
                   color: isSelected
                     ? colors.bg
@@ -103,6 +104,11 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  dayLabelToday: {
+    fontFamily: 'Manrope_800ExtraBold',
+    fontSize: 12,
+    letterSpacing: 0.2,
   },
   dayNumber: {
     fontFamily: 'BricolageGrotesque_700Bold',

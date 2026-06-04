@@ -38,7 +38,7 @@ export function FollowedSection({ summaries, followedIds, onPress }: Props) {
               Engar deildir ennþá
             </Text>
             <Text style={[styles.emptySub, { color: colors.textMuted }]}>
-              Smelltu á „Fylgjast" í deildarsíðu til að bæta hér við.
+              Smelltu á „Fylgja" í deildarsíðu til að bæta hér við.
             </Text>
           </View>
         </View>

@@ -20,8 +20,13 @@ export function BottomDock() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Search is a focused full-screen task — no dock needed there.
-  if (pathname === '/leit') return null;
+  // Hide dock on full-screen detail pages and search.
+  if (
+    pathname === '/leit' ||
+    pathname.startsWith('/match/') ||
+    pathname.startsWith('/team/') ||
+    pathname.startsWith('/league/')
+  ) return null;
 
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
 

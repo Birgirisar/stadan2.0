@@ -251,7 +251,7 @@ export default function TeamDetailScreen() {
               color={followed ? colors.gold : colors.accent}
             />
             <Text style={[styles.followText, { color: followed ? colors.gold : colors.accent }]}>
-              {followed ? 'Fylgist með' : 'Fylgjast'}
+              {followed ? 'Fylgist með' : 'Fylgja'}
             </Text>
           </Pressable>
         </View>
