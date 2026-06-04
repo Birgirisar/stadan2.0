@@ -345,7 +345,7 @@ export default function StillingarScreen() {
             <View style={styles.rowRight}>
               <Text style={[styles.rowValue, { color: colors.textSecondary }]}>Íslenska</Text>
               <Text style={[styles.rowValueMuted, { color: colors.textMuted }]}>
-                {' · English coming later'}
+                {' · English coming soon'}
               </Text>
             </View>
           </View>
@@ -358,7 +358,7 @@ export default function StillingarScreen() {
             <View style={styles.row}>
               <View style={styles.rowLeft}>
                 <Ionicons name="share-social-outline" size={18} color={colors.textSecondary} />
-                <Text style={[styles.rowLabel, { color: colors.text }]}>Meta appið vinum</Text>
+                <Text style={[styles.rowLabel, { color: colors.text }]}>Deila appinu með vinum</Text>
               </View>
               <View style={styles.rowRight}>
                 <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />

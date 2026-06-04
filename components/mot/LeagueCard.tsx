@@ -1,9 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { LeagueSummary } from '../../lib/api/types';
 import { useTheme } from '../../lib/theme/useTheme';
 import { formatStartDate } from '../../lib/utils/dates';
+
+const LOCAL_LEAGUE_IMAGES: Record<number, ImageSourcePropType> = {
+  345:  require('../../assets/leagues/besta-deild.png'),
+  1710: require('../../assets/leagues/besta-deild.png'),
+  348:  require('../../assets/leagues/lengju-deild.jpeg'),
+  1711: require('../../assets/leagues/lengju-deild.jpeg'),
+};
 
 interface Props {
   summary: LeagueSummary;
@@ -15,6 +22,7 @@ export function LeagueCard({ summary, onPress }: Props) {
   const { name, imagePath, isWomens, currentSeasonYear, seasonState, startingAt, leader, champion, liveCount } = summary;
 
   const hasLive = liveCount > 0;
+  const localImage = LOCAL_LEAGUE_IMAGES[summary.leagueId];
 
   return (
     <TouchableOpacity
@@ -25,7 +33,7 @@ export function LeagueCard({ summary, onPress }: Props) {
         {
           backgroundColor: colors.surface,
           borderColor: hasLive
-            ? blendLiveBorder(colors.live, colors.border)
+            ? blendLiveBorder(colors.live)
             : colors.border,
         },
       ]}
@@ -42,12 +50,13 @@ export function LeagueCard({ summary, onPress }: Props) {
           { backgroundColor: colors.surfaceSunken, borderColor: colors.border },
         ]}
       >
-        {imagePath ? (
+        {localImage ? (
+          <Image source={localImage} style={styles.logoImg} resizeMode="contain" />
+        ) : imagePath ? (
           <Image source={{ uri: imagePath }} style={styles.logoImg} resizeMode="contain" />
         ) : (
           <View style={[styles.logoFallback, isWomens && styles.logoFallbackWomens]} />
         )}
-        {isWomens && <View style={styles.womensTint} />}
       </View>
 
       {/* Info block */}
@@ -161,8 +170,8 @@ function TeamCrest({
   );
 }
 
-function blendLiveBorder(live: string, border: string): string {
-  return live + '66'; // 40% opacity live color — approximation
+function blendLiveBorder(live: string): string {
+  return live + '66';
 }
 
 const styles = StyleSheet.create({

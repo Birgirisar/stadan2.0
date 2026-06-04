@@ -1,7 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../lib/theme/useTheme';
+
+const LOCAL_LEAGUE_IMAGES: Record<number, ImageSourcePropType> = {
+  345:  require('../../assets/leagues/besta-deild.png'),
+  1710: require('../../assets/leagues/besta-deild.png'),
+  348:  require('../../assets/leagues/lengju-deild.jpeg'),
+  1711: require('../../assets/leagues/lengju-deild.jpeg'),
+};
 
 interface Props {
   type: 'league' | 'team';
@@ -15,6 +22,7 @@ interface Props {
 
 export const SearchResultRow = React.memo(function SearchResultRow({
   type,
+  id,
   name,
   subtitle,
   imagePath,
@@ -24,7 +32,8 @@ export const SearchResultRow = React.memo(function SearchResultRow({
   const { colors } = useTheme();
   const [imgError, setImgError] = useState(false);
 
-  const showImage = !!imagePath && !imgError;
+  const localImage = type === 'league' ? LOCAL_LEAGUE_IMAGES[id] : undefined;
+  const showImage = !!localImage || (!!imagePath && !imgError);
   const initials = name.slice(0, 2).toUpperCase();
 
   return (
@@ -42,7 +51,9 @@ export const SearchResultRow = React.memo(function SearchResultRow({
           { backgroundColor: colors.surfaceElev, borderColor: colors.border },
         ]}
       >
-        {showImage ? (
+        {localImage ? (
+          <Image source={localImage} style={styles.logo} resizeMode="contain" />
+        ) : showImage ? (
           <Image
             source={{ uri: imagePath }}
             style={styles.logo}

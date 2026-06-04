@@ -6,11 +6,19 @@ import React, { useRef, useState, useMemo } from 'react';
 import {
   Animated,
   Image,
+  ImageSourcePropType,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+
+const LOCAL_LEAGUE_IMAGES: Record<number, ImageSourcePropType> = {
+  345:  require('../../assets/leagues/besta-deild.png'),
+  1710: require('../../assets/leagues/besta-deild.png'),
+  348:  require('../../assets/leagues/lengju-deild.jpeg'),
+  1711: require('../../assets/leagues/lengju-deild.jpeg'),
+};
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme/useTheme';
 import { useQuery } from '@tanstack/react-query';
@@ -142,7 +150,13 @@ export function LeagueDetailScreen({ leagueId }: Props) {
           onLayout={(e) => setLeagueHeaderHeight(e.nativeEvent.layout.height)}
         >
           <View style={[styles.leagueLogo, { backgroundColor: colors.surfaceSunken, borderColor: colors.border }]}>
-            {league?.image_path ? (
+            {LOCAL_LEAGUE_IMAGES[leagueId] ? (
+              <Image
+                source={LOCAL_LEAGUE_IMAGES[leagueId]}
+                style={styles.leagueLogoImg}
+                resizeMode="contain"
+              />
+            ) : league?.image_path ? (
               <Image
                 source={{ uri: league.image_path }}
                 style={styles.leagueLogoImg}
