@@ -90,6 +90,8 @@ export default function LeikirScreen() {
   const { data: fixtures = [], isLoading, isFetching, error, refetch } = useFixturesByDate(selectedDate);
 
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
+  const gradStart = theme === 'dark' ? '#0b120f' : '#ecf5f0';
+  const gradEnd = colors.bg;
 
   const { followedIds: followedTeamIds } = useFollowedTeams();
 
@@ -275,6 +277,13 @@ export default function LeikirScreen() {
             paddingBottom: 12,
           }}
         >
+          <LinearGradient
+            colors={[gradStart, gradEnd]}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            pointerEvents="none"
+          />
           <View style={styles.headerTop}>
             <Text style={[styles.appTitle, { color: colors.text }]}>
               Staðan<Text style={{ color: colors.accent }}>.</Text>
