@@ -1,5 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme/useTheme';
 import { TeamBadge } from '../fixtures/TeamBadge';
 import type { StandingRow } from '../../lib/api/types';
@@ -9,6 +11,7 @@ interface Props {
   standings: StandingRow[];
   teamId: number;
   leagueName: string | null;
+  leagueId: number | null;
 }
 
 function getTeamId(r: StandingRow): number {
@@ -28,8 +31,9 @@ function gdStr(n: number): string {
   return n > 0 ? `+${n}` : `${n}`;
 }
 
-export function MiniPositionCard({ standings, teamId, leagueName }: Props) {
+export function MiniPositionCard({ standings, teamId, leagueName, leagueId }: Props) {
   const { colors } = useTheme();
+  const router = useRouter();
 
   if (!standings.length) return null;
 
@@ -42,14 +46,24 @@ export function MiniPositionCard({ standings, teamId, leagueName }: Props) {
   const slice = standings.slice(start, end);
 
   return (
-    <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <Pressable
+      style={({ pressed }) => [
+        styles.section,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        pressed && { opacity: 0.7 },
+      ]}
+      onPress={() => leagueId && router.push(`/league/${leagueId}` as any)}
+    >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.textSecondary }]}>Staða í deild</Text>
-        {leagueName && (
-          <Text style={[styles.leagueLabel, { color: colors.textMuted }]} numberOfLines={1}>
-            {leagueName}
-          </Text>
-        )}
+        <View style={styles.headerRight}>
+          {leagueName && (
+            <Text style={[styles.leagueLabel, { color: colors.textMuted }]} numberOfLines={1}>
+              {leagueName}
+            </Text>
+          )}
+          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+        </View>
       </View>
 
       {/* Table header */}
@@ -106,7 +120,7 @@ export function MiniPositionCard({ standings, teamId, leagueName }: Props) {
           </View>
         );
       })}
-    </View>
+    </Pressable>
   );
 }
 
@@ -132,6 +146,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 1,
   },
   leagueLabel: {
     fontFamily: 'Manrope_500Medium',

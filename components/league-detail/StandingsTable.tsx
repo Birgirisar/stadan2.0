@@ -18,8 +18,12 @@ interface Props {
 function getZoneColor(
   leagueId: number,
   row: StandingRow
-): 'promotion' | 'relegation' | null {
-  // Try API rule first
+): 'promotion' | 'playoff' | 'relegation' | null {
+  // Hardcoded rules take full priority for leagues we've explicitly configured
+  if (ZONE_RULES[leagueId]) {
+    return ZONE_RULES[leagueId][row.position] ?? null;
+  }
+  // Fall back to API rule for unconfigured leagues
   if (row.rule?.name) {
     const ruleName = row.rule.name.toLowerCase();
     if (
@@ -35,8 +39,7 @@ function getZoneColor(
       return 'relegation';
     }
   }
-  // Fall back to hardcoded rules
-  return ZONE_RULES[leagueId]?.[row.position] ?? null;
+  return null;
 }
 
 function getTeamId(row: StandingRow): number {
@@ -47,7 +50,11 @@ export function StandingsTable({ rows, mode, leagueId, liveTeamIds, highlightTea
   const highlightSet = highlightTeamIds ? new Set(highlightTeamIds) : null;
   const { colors } = useTheme();
 
+
+
+
   const hasPromotionZone = rows.some((r) => getZoneColor(leagueId, r) === 'promotion');
+  const hasPlayoffZone = rows.some((r) => getZoneColor(leagueId, r) === 'playoff');
   const hasRelegationZone = rows.some((r) => getZoneColor(leagueId, r) === 'relegation');
 
   return (
@@ -99,10 +106,12 @@ export function StandingsTable({ rows, mode, leagueId, liveTeamIds, highlightTea
         })}
       </View>
 
-      {(hasPromotionZone || hasRelegationZone) && (
+      {(hasPromotionZone || hasPlayoffZone || hasRelegationZone) && (
         <ZoneLegend
           showPromotion={hasPromotionZone}
+          showPlayoff={hasPlayoffZone}
           showRelegation={hasRelegationZone}
+          leagueId={leagueId}
         />
       )}
     </>

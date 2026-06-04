@@ -9,7 +9,7 @@ import { extractStat, parseForm } from '../../lib/api/leagues';
 interface Props {
   row: StandingRow;
   mode: 'tafla' | 'form';
-  zoneColor?: 'promotion' | 'relegation' | null;
+  zoneColor?: 'promotion' | 'playoff' | 'relegation' | null;
   isLive?: boolean;
   isLast?: boolean;
   /** Highlight this row with accent-soft background (used by match detail Tafla) */

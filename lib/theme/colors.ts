@@ -20,6 +20,7 @@ export const DarkColors = {
   draw: '#3a3f47',
   loss: '#d6334a',
   promotion: '#15a85f',
+  playoff: '#e8b04a',
   relegation: '#d6334a',
 } as const;
 
@@ -45,6 +46,7 @@ export const LightColors = {
   draw: '#6c727c',
   loss: '#d6334a',
   promotion: '#1b8c3f',
+  playoff: '#c98a1a',
   relegation: '#d6334a',
 } as const;
 
@@ -70,5 +72,6 @@ export interface ThemeColors {
   draw: string;
   loss: string;
   promotion: string;
+  playoff: string;
   relegation: string;
 }

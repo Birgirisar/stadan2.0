@@ -52,7 +52,7 @@ export function H2HTab({ homeTeam, awayTeam, currentFixtureId }: Props) {
             Engir fyrri fundir tiltækir
           </Text>
           <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-            Þetta er fyrsti leikur þessara liða á okkar gögnum.
+            Þetta getur verið vegna þess að liðin hafa ekki mæst áður, eða vegna skorts á gögnum.
           </Text>
         </View>
       </View>
@@ -69,6 +69,12 @@ export function H2HTab({ homeTeam, awayTeam, currentFixtureId }: Props) {
         awayTeam={awayTeam}
       />
       <H2HMatchList meetings={data.meetings} />
+      <View style={styles.dataNote}>
+        <Ionicons name="information-circle-outline" size={13} color={colors.textMuted} />
+        <Text style={[styles.dataNoteText, { color: colors.textMuted }]}>
+          Gögn ná aðeins aftur til 2024
+        </Text>
+      </View>
       <View style={styles.bottomPad} />
     </View>
   );
@@ -152,6 +158,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 280,
     lineHeight: 17,
+  },
+  dataNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginTop: 16,
+    marginHorizontal: 14,
+  },
+  dataNoteText: {
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 11,
   },
   bottomPad: {
     height: 24,

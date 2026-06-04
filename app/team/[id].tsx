@@ -303,6 +303,7 @@ export default function TeamDetailScreen() {
         {activeTab === 'yfirlit' && (
           <YfirliContent
             teamId={teamId}
+            leagueId={leagueId}
             leagueName={leagueName}
             inSupportedLeague={inSupportedLeague}
             nextMatch={nextMatch}
@@ -343,6 +344,7 @@ export default function TeamDetailScreen() {
 
 interface YfirliProps {
   teamId: number;
+  leagueId: number | null;
   leagueName: string | null;
   inSupportedLeague: boolean;
   nextMatch: import('../../lib/api/types').Fixture | null;
@@ -359,6 +361,7 @@ interface YfirliProps {
 
 function YfirliContent({
   teamId,
+  leagueId,
   leagueName,
   inSupportedLeague,
   nextMatch,
@@ -402,6 +405,7 @@ function YfirliContent({
           standings={standings as any}
           teamId={teamId}
           leagueName={leagueName}
+          leagueId={leagueId}
         />
       )}
 
