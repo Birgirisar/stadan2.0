@@ -407,18 +407,6 @@ export default function StillingarScreen() {
               </Text>
             </View>
           </View>
-
-          <View style={[styles.row, { borderTopWidth: 1, borderTopColor: colors.border }]}>
-            <View style={styles.rowLeft}>
-              <Ionicons name="heart-outline" size={18} color={colors.textSecondary} />
-              <Text style={[styles.rowLabel, { color: colors.text }]}>Útbúið með</Text>
-            </View>
-            <View style={styles.rowRight}>
-              <Text style={[styles.rowValue, { color: colors.textMuted }]}>
-                umhyggju á Íslandi
-              </Text>
-            </View>
-          </View>
         </View>
       </ScrollView>
 
