@@ -50,6 +50,7 @@ export function DaySelector({ selectedDate, today, onSelect }: Props) {
             style={[
               styles.pill,
               isSelected && { backgroundColor: colors.text },
+              isToday && !isSelected && { borderWidth: 1, borderColor: colors.accent },
             ]}
             activeOpacity={0.7}
           >

@@ -147,6 +147,10 @@ export function MatchRow({ fixture, isLast, showDate }: Props) {
           <Text style={[styles.time, { color: colors.textSecondary }]}>
             {formatKickoffTime(fixture.starting_at)}
           </Text>
+        ) : stateResult.type === 'cancelled' ? (
+          <Text style={[styles.time, styles.cancelledTime, { color: colors.textMuted }]}>
+            {formatKickoffTime(fixture.starting_at)}
+          </Text>
         ) : null}
       </View>
 
@@ -255,6 +259,10 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 12.5,
     letterSpacing: -0.2,
+  },
+  cancelledTime: {
+    textDecorationLine: 'line-through',
+    opacity: 0.45,
   },
   scoreWithCards: {
     flexDirection: 'row',
