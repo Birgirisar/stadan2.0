@@ -12,6 +12,7 @@ import { useTheme } from '../../lib/theme/useTheme';
 import { getSectionHeading, toDateString } from '../../lib/utils/dates';
 import { getMatchState } from '../../lib/utils/state';
 import { useFollowedTeams } from '../../lib/hooks/useFollowedTeams';
+import { DatePickerModal } from '../../components/fixtures/DatePickerModal';
 import { DaySelector } from '../../components/fixtures/DaySelector';
 import { FilterChips, FilterType } from '../../components/fixtures/FilterChips';
 import { LeagueSection } from '../../components/fixtures/LeagueSection';
@@ -49,7 +50,27 @@ export default function LeikirScreen() {
 
   const [selectedDate, setSelectedDate] = useState<Date>(today);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerView, setPickerView] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [headerHeight, setHeaderHeight] = useState(insets.top + 130);
+
+  // Sync picker view to selected date whenever the modal opens
+  useEffect(() => {
+    if (showDatePicker) {
+      setPickerView({ year: selectedDate.getFullYear(), month: selectedDate.getMonth() });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDatePicker]);
+
+  function shiftPickerMonth(delta: number) {
+    setPickerView(prev => {
+      let m = prev.month + delta;
+      let y = prev.year;
+      if (m < 0) { m = 11; y--; }
+      else if (m > 11) { m = 0; y++; }
+      return { year: y, month: m };
+    });
+  }
 
   // Ref so PanResponder closure always has the latest date without being recreated
   const shiftDay = useRef<(delta: number) => void>(() => {});
@@ -63,6 +84,14 @@ export default function LeikirScreen() {
     };
   }, []);
 
+  // Tracks whether the date picker modal is open — read by PanResponder closure
+  const datePickerOpen = useRef(false);
+  useEffect(() => { datePickerOpen.current = showDatePicker; }, [showDatePicker]);
+
+  // Ref so PanResponder can call the latest shiftPickerMonth without being recreated
+  const shiftPickerMonthRef = useRef(shiftPickerMonth);
+  useEffect(() => { shiftPickerMonthRef.current = shiftPickerMonth; });
+
   // True while a touch is active inside any horizontal scroll area — suppresses date-shift swipe
   const horizontalScrollActive = useRef(false);
 
@@ -74,8 +103,13 @@ export default function LeikirScreen() {
         !horizontalScrollActive.current &&
         Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 12,
       onPanResponderRelease: (_, { dx }) => {
-        if (dx < -100) shiftDay.current(1);
-        else if (dx > 100) shiftDay.current(-1);
+        if (datePickerOpen.current) {
+          if (dx < -100) shiftPickerMonthRef.current(1);
+          else if (dx > 100) shiftPickerMonthRef.current(-1);
+        } else {
+          if (dx < -100) shiftDay.current(1);
+          else if (dx > 100) shiftDay.current(-1);
+        }
       },
     })
   ).current;
@@ -290,6 +324,19 @@ export default function LeikirScreen() {
             </Text>
             <View style={styles.headerActions}>
               <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
+                style={[
+                  styles.iconBtn,
+                  {
+                    backgroundColor: `rgba(${colors.bgRgb}, 0.6)`,
+                    borderColor: colors.border,
+                  },
+                ]}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="calendar-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={toggleTheme}
                 style={[
                   styles.iconBtn,
@@ -341,6 +388,17 @@ export default function LeikirScreen() {
           pointerEvents="none"
         />
       </View>
+      <DatePickerModal
+        visible={showDatePicker}
+        selectedDate={selectedDate}
+        today={today}
+        viewYear={pickerView.year}
+        viewMonth={pickerView.month}
+        onPrevMonth={() => shiftPickerMonth(-1)}
+        onNextMonth={() => shiftPickerMonth(1)}
+        onSelect={setSelectedDate}
+        onClose={() => setShowDatePicker(false)}
+      />
     </View>
   );
 }
