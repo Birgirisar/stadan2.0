@@ -78,6 +78,7 @@ export function StandingsRow({ row, mode, zoneColor, isLive, isLast, isHighlight
         imageUrl={team?.image_path ?? ''}
         shortCode={team?.short_code ?? team?.name?.slice(0, 3) ?? '?'}
         size={22}
+        teamId={teamId}
       />
 
       {/* Team name + live dot */}

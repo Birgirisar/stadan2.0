@@ -106,6 +106,7 @@ export function MiniLeagueTable({ standings, homeTeamId, awayTeamId, onSeeTable 
                 imageUrl={team?.image_path ?? ''}
                 shortCode={team?.short_code ?? team?.name?.slice(0, 3) ?? '?'}
                 size={18}
+                teamId={teamId}
               />
               <Text
                 style={[

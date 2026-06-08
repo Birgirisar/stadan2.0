@@ -86,6 +86,7 @@ function FormRowCell({ entry, loading, colors }: CellProps) {
         imageUrl={entry.homeTeam.image_path}
         shortCode={entry.homeTeam.short_code}
         size={24}
+        teamId={entry.homeTeam.id}
       />
       <View style={[styles.scorePill, { backgroundColor: pillColor }]}>
         <Text style={styles.scoreText}>
@@ -96,6 +97,7 @@ function FormRowCell({ entry, loading, colors }: CellProps) {
         imageUrl={entry.awayTeam.image_path}
         shortCode={entry.awayTeam.short_code}
         size={24}
+        teamId={entry.awayTeam.id}
       />
     </Pressable>
   );

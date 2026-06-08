@@ -28,6 +28,7 @@ function leaderFromRow(row: StandingRow | undefined) {
     shortCode: row.participant.short_code ?? row.participant.name.slice(0, 3).toUpperCase(),
     imagePath: row.participant.image_path ?? '',
     points: extractPoints(row),
+    teamId: row.participant_id ?? row.team_id ?? row.participant.id,
   };
 }
 

@@ -109,7 +109,7 @@ export function MatchRow({ fixture, isLast, showDate }: Props) {
         >
           {home?.name ?? ''}
         </Text>
-        <TeamBadge imageUrl={home?.image_path ?? ''} shortCode={home?.short_code ?? ''} />
+        <TeamBadge imageUrl={home?.image_path ?? ''} shortCode={home?.short_code ?? ''} teamId={home?.id} />
       </View>
 
       {/* Center — 54px */}
@@ -156,7 +156,7 @@ export function MatchRow({ fixture, isLast, showDate }: Props) {
 
       {/* Away team — flex 1, left-aligned */}
       <View style={[styles.teamAway, awayIsLoser && styles.loser]}>
-        <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} />
+        <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} teamId={away?.id} />
         <Text
           style={[styles.teamName, { color: awayIsLoser ? colors.textMuted : colors.text }]}
           numberOfLines={2}

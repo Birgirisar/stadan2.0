@@ -63,6 +63,7 @@ export function NextMatchCard({ fixture, seasonStart }: Props) {
             imageUrl={home?.image_path ?? ''}
             shortCode={home?.short_code ?? home?.name?.slice(0, 3) ?? '?'}
             size={32}
+            teamId={home?.id}
           />
           <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2}>
             {home?.name ?? '—'}
@@ -77,6 +78,7 @@ export function NextMatchCard({ fixture, seasonStart }: Props) {
             imageUrl={away?.image_path ?? ''}
             shortCode={away?.short_code ?? away?.name?.slice(0, 3) ?? '?'}
             size={32}
+            teamId={away?.id}
           />
           <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={2}>
             {away?.name ?? '—'}

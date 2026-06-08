@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getLocalTeamBadge } from '../../constants/teamBadges';
 import type { LeagueSummary } from '../../lib/api/types';
 import { useTheme } from '../../lib/theme/useTheme';
 import { formatStartDate } from '../../lib/utils/dates';
@@ -83,7 +84,7 @@ export function LeagueCard({ summary, onPress }: Props) {
           ) : seasonState === 'finished' && champion ? (
             <>
               <View style={styles.leader}>
-                <TeamCrest imagePath={champion.imagePath} shortCode={champion.shortCode} gold />
+                <TeamCrest imagePath={champion.imagePath} shortCode={champion.shortCode} teamId={champion.teamId} gold />
                 <Text style={[styles.leaderName, { color: colors.text }]} numberOfLines={1}>
                   {champion.name}
                 </Text>
@@ -96,7 +97,7 @@ export function LeagueCard({ summary, onPress }: Props) {
           ) : leader ? (
             <>
               <View style={styles.leader}>
-                <TeamCrest imagePath={leader.imagePath} shortCode={leader.shortCode} />
+                <TeamCrest imagePath={leader.imagePath} shortCode={leader.shortCode} teamId={leader.teamId} />
                 <Text style={[styles.leaderName, { color: colors.text }]} numberOfLines={1}>
                   {leader.name}
                 </Text>
@@ -135,14 +136,17 @@ export function LeagueCard({ summary, onPress }: Props) {
 function TeamCrest({
   imagePath,
   shortCode,
+  teamId,
   gold,
 }: {
   imagePath: string;
   shortCode: string;
+  teamId?: number;
   gold?: boolean;
 }) {
   const { colors } = useTheme();
   const [hasError, setHasError] = React.useState(false);
+  const localSource = getLocalTeamBadge(teamId);
 
   return (
     <View
@@ -155,7 +159,9 @@ function TeamCrest({
         },
       ]}
     >
-      {!hasError && imagePath ? (
+      {localSource ? (
+        <Image source={localSource} style={styles.crestImg} />
+      ) : !hasError && imagePath ? (
         <Image
           source={{ uri: imagePath }}
           style={styles.crestImg}

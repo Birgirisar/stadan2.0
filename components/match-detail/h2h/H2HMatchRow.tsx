@@ -46,7 +46,7 @@ export function H2HMatchRow({ fixture, isLast }: Props) {
           <Text style={[styles.teamName, styles.teamNameRight, { color: colors.text }]} numberOfLines={1}>
             {home?.name ?? ''}
           </Text>
-          <TeamBadge imageUrl={home?.image_path ?? ''} shortCode={home?.short_code ?? ''} size={18} />
+          <TeamBadge imageUrl={home?.image_path ?? ''} shortCode={home?.short_code ?? ''} size={18} teamId={home?.id} />
         </View>
 
         {/* Score */}
@@ -60,7 +60,7 @@ export function H2HMatchRow({ fixture, isLast }: Props) {
 
         {/* Away team */}
         <View style={styles.teamAway}>
-          <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} size={18} />
+          <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} size={18} teamId={away?.id} />
           <Text style={[styles.teamName, { color: colors.text }]} numberOfLines={1}>
             {away?.name ?? ''}
           </Text>

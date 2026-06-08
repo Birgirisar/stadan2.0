@@ -222,6 +222,7 @@ export default function TeamDetailScreen() {
                   imageUrl={team.image_path ?? ''}
                   shortCode={team.short_code ?? team.name.slice(0, 3)}
                   size={26}
+                  teamId={team.id}
                 />
                 <Text
                   style={[styles.topBarTitleText, { color: colors.text }]}

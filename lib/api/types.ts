@@ -267,8 +267,8 @@ export interface LeagueSummary {
   currentSeasonYear: string;
   seasonState: 'active' | 'upcoming' | 'finished';
   startingAt: string | null;
-  leader: { name: string; shortCode: string; imagePath: string; points: number } | null;
-  champion: { name: string; shortCode: string; imagePath: string } | null;
+  leader: { name: string; shortCode: string; imagePath: string; points: number; teamId?: number } | null;
+  champion: { name: string; shortCode: string; imagePath: string; teamId?: number } | null;
   liveCount: number;
   seasons: Season[];
 }

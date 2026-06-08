@@ -1,5 +1,6 @@
 import React from 'react';
 import { Animated, Image, StyleSheet, Text, View } from 'react-native';
+import { getLocalTeamBadge } from '../../constants/teamBadges';
 import { useTheme } from '../../lib/theme/useTheme';
 import type { TeamInfo } from '../../lib/api/teamDetail';
 
@@ -12,6 +13,7 @@ interface Props {
 export function TeamHeader({ team, leagueName, onLayout }: Props) {
   const { colors } = useTheme();
   const [imgError, setImgError] = React.useState(false);
+  const localSource = getLocalTeamBadge(team.id);
 
   return (
     <View
@@ -20,7 +22,9 @@ export function TeamHeader({ team, leagueName, onLayout }: Props) {
     >
       {/* Large crest */}
       <View style={styles.crestWrap}>
-        {imgError || !team.image_path ? (
+        {localSource ? (
+          <Image source={localSource} style={styles.crest} />
+        ) : imgError || !team.image_path ? (
           <View style={[styles.crestFallback, { backgroundColor: colors.surfaceElev, borderColor: colors.border }]}>
             <Text style={[styles.crestFallbackText, { color: colors.textMuted }]}>
               {(team.short_code ?? team.name).slice(0, 3).toUpperCase()}

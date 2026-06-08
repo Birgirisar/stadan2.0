@@ -202,7 +202,7 @@ export function HeroCollapsing({
         pointerEvents="none"
       >
         <View style={styles.compactCenter}>
-          <TeamBadge imageUrl={home?.image_path ?? ''} shortCode={home?.short_code ?? ''} size={26} />
+          <TeamBadge imageUrl={home?.image_path ?? ''} shortCode={home?.short_code ?? ''} size={26} teamId={home?.id} />
           {isPending ? (
             <Text style={[styles.compactScore, { color: colors.text }]}>
               {formatKickoffTime(fixture.starting_at)}
@@ -214,7 +214,7 @@ export function HeroCollapsing({
               {score.away ?? '-'}
             </Text>
           )}
-          <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} size={26} />
+          <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} size={26} teamId={away?.id} />
         </View>
       </Animated.View>
 
@@ -229,7 +229,7 @@ export function HeroCollapsing({
         {/* Row 1: crests + score digits */}
         <Animated.View style={[styles.scoreRow1, { opacity: scoreOpacity }]}>
           <Pressable style={styles.teamCrestCell} onPress={() => goToTeam(home?.id)} hitSlop={8}>
-            <TeamBadge imageUrl={home?.image_path ?? ''} shortCode={home?.short_code ?? ''} size={48} />
+            <TeamBadge imageUrl={home?.image_path ?? ''} shortCode={home?.short_code ?? ''} size={48} teamId={home?.id} />
           </Pressable>
 
           {/* Fixed-width columns keep the center cell perfectly centred regardless of cards */}
@@ -256,7 +256,7 @@ export function HeroCollapsing({
           </View>
 
           <Pressable style={styles.teamCrestCell} onPress={() => goToTeam(away?.id)} hitSlop={8}>
-            <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} size={48} />
+            <TeamBadge imageUrl={away?.image_path ?? ''} shortCode={away?.short_code ?? ''} size={48} teamId={away?.id} />
           </Pressable>
         </Animated.View>
 

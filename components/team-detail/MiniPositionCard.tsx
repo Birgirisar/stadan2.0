@@ -102,6 +102,7 @@ export function MiniPositionCard({ standings, teamId, leagueName, leagueId }: Pr
                 imageUrl={team?.image_path ?? ''}
                 shortCode={team?.short_code ?? team?.name?.slice(0, 3) ?? '?'}
                 size={18}
+                teamId={tid}
               />
               <Text
                 style={[

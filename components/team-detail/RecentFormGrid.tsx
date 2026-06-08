@@ -81,6 +81,7 @@ export function RecentFormGrid({ form, fixtures, teamId }: Props) {
                 imageUrl={opponent?.image_path ?? ''}
                 shortCode={opponent?.short_code ?? opponent?.name?.slice(0, 3) ?? '?'}
                 size={28}
+                teamId={opponent?.id}
               />
             </Pressable>
           );
