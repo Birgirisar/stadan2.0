@@ -52,6 +52,13 @@ export interface RoundFull {
   ending_at: string | null;
   /** Embedded fixtures — present when fetched via /rounds/{id}?include=fixtures.* */
   fixtures?: Fixture[];
+  /**
+   * Set when this entry represents multiple concurrent playoff rounds merged
+   * into one display chip (e.g. championship group + relegation group playing
+   * on the same matchday). Fetching fixtures for this round should use ALL
+   * IDs in this array so both groups' games are shown together.
+   */
+  mergedIds?: number[];
 }
 
 export interface Fixture {
@@ -187,6 +194,22 @@ export interface StatisticEntry {
   participant_id: number;
   data?: { value: number | string | null };
   type?: { name: string; code: string; developer_name?: string };
+}
+
+/**
+ * A labelled group of standing rows for one stage (e.g. regular season,
+ * championship playoff, relegation playoff). Used for split-phase leagues
+ * like Besta deild karla / kvenna.
+ */
+export interface StandingGroup {
+  stageId?: number;
+  /** Raw stage name as returned by the API */
+  stageName: string;
+  /** Icelandic display label shown as a section header */
+  label: string;
+  /** Distinguishes the regular season stage from playoff stages */
+  type: 'regular' | 'championship' | 'relegation';
+  rows: StandingRow[];
 }
 
 export interface Standing {

@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { StandingRow } from '../../lib/api/types';
 import { useTheme } from '../../lib/theme/useTheme';
-import { ZONE_RULES } from '../../constants/leagues';
+import { ZONE_RULES, type ZoneLabels } from '../../constants/leagues';
 import { StandingsRow } from './StandingsRow';
 import { ZoneLegend } from './ZoneLegend';
 
@@ -13,31 +13,30 @@ interface Props {
   liveTeamIds: Set<number>;
   /** Team IDs to highlight with accent-soft background (0–2 values; match detail use) */
   highlightTeamIds?: number[];
+  /**
+   * Explicit position→zone map. When provided, overrides the ZONE_RULES lookup.
+   * Pass an empty object {} to suppress all zone colours (e.g. groups with no rules).
+   */
+  zoneRules?: Record<number, 'promotion' | 'playoff' | 'relegation'>;
+  /** Custom legend labels that override the default league-based strings. */
+  zoneLabels?: ZoneLabels;
 }
 
-function getZoneColor(
+function resolveZoneColor(
   leagueId: number,
-  row: StandingRow
+  row: StandingRow,
+  zoneRules: Record<number, 'promotion' | 'playoff' | 'relegation'> | undefined
 ): 'promotion' | 'playoff' | 'relegation' | null {
-  // Hardcoded rules take full priority for leagues we've explicitly configured
+  if (zoneRules !== undefined) {
+    return zoneRules[row.position] ?? null;
+  }
   if (ZONE_RULES[leagueId]) {
     return ZONE_RULES[leagueId][row.position] ?? null;
   }
-  // Fall back to API rule for unconfigured leagues
   if (row.rule?.name) {
-    const ruleName = row.rule.name.toLowerCase();
-    if (
-      ruleName.includes('promotion') ||
-      ruleName.includes('champions') ||
-      ruleName.includes('europa') ||
-      ruleName.includes('conference') ||
-      ruleName.includes('evrópukeppni')
-    ) {
-      return 'promotion';
-    }
-    if (ruleName.includes('relegation') || ruleName.includes('fall')) {
-      return 'relegation';
-    }
+    const n = row.rule.name.toLowerCase();
+    if (n.includes('promotion') || n.includes('champions') || n.includes('europa') || n.includes('conference') || n.includes('evrópukeppni')) return 'promotion';
+    if (n.includes('relegation') || n.includes('fall')) return 'relegation';
   }
   return null;
 }
@@ -46,16 +45,13 @@ function getTeamId(row: StandingRow): number {
   return row.participant_id ?? row.team_id ?? row.participant?.id ?? 0;
 }
 
-export function StandingsTable({ rows, mode, leagueId, liveTeamIds, highlightTeamIds }: Props) {
+export function StandingsTable({ rows, mode, leagueId, liveTeamIds, highlightTeamIds, zoneRules, zoneLabels }: Props) {
   const highlightSet = highlightTeamIds ? new Set(highlightTeamIds) : null;
   const { colors } = useTheme();
 
-
-
-
-  const hasPromotionZone = rows.some((r) => getZoneColor(leagueId, r) === 'promotion');
-  const hasPlayoffZone = rows.some((r) => getZoneColor(leagueId, r) === 'playoff');
-  const hasRelegationZone = rows.some((r) => getZoneColor(leagueId, r) === 'relegation');
+  const hasPromotionZone = rows.some((r) => resolveZoneColor(leagueId, r, zoneRules) === 'promotion');
+  const hasPlayoffZone   = rows.some((r) => resolveZoneColor(leagueId, r, zoneRules) === 'playoff');
+  const hasRelegationZone = rows.some((r) => resolveZoneColor(leagueId, r, zoneRules) === 'relegation');
 
   return (
     <>
@@ -90,7 +86,7 @@ export function StandingsTable({ rows, mode, leagueId, liveTeamIds, highlightTea
         </View>
 
         {rows.map((row, idx) => {
-          const zoneColor = getZoneColor(leagueId, row);
+          const zoneColor = resolveZoneColor(leagueId, row, zoneRules);
           const teamId = getTeamId(row);
           return (
             <StandingsRow
@@ -112,6 +108,9 @@ export function StandingsTable({ rows, mode, leagueId, liveTeamIds, highlightTea
           showPlayoff={hasPlayoffZone}
           showRelegation={hasRelegationZone}
           leagueId={leagueId}
+          promotionLabel={zoneLabels?.promotion}
+          playoffLabel={zoneLabels?.playoff}
+          relegationLabel={zoneLabels?.relegation}
         />
       )}
     </>

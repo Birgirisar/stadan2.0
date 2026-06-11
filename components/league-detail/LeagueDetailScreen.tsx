@@ -22,12 +22,19 @@ const LOCAL_LEAGUE_IMAGES: Record<number, ImageSourcePropType> = {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme/useTheme';
 import { useQuery } from '@tanstack/react-query';
-import { useLeagueMeta, useLeagueStandings } from '../../lib/hooks/useLeagueDetail';
+import { useLeagueMeta, useLeagueStandingsGrouped } from '../../lib/hooks/useLeagueDetail';
 import { fetchTopScorers } from '../../lib/api/teamDetail';
 import { useFixturesByDate } from '../../lib/api/fixtures';
 import { useLeagueFixtures } from '../../lib/hooks/useLeagueFixtures';
 import { getLiveTeamIds } from '../../lib/utils/liveTeams';
-import { LEAGUES } from '../../constants/leagues';
+import {
+  LEAGUES,
+  EFRI_HLUTI_ZONE_RULES,
+  NEDRI_HLUTI_ZONE_RULES,
+  EFRI_HLUTI_ZONE_LABELS,
+  NEDRI_HLUTI_ZONE_LABELS,
+  type ZoneLabels,
+} from '../../constants/leagues';
 import { LeagueSubTabs, type LeagueSubTabId } from './LeagueSubTabs';
 import { ViewToggle, type ViewMode } from './ViewToggle';
 import { StandingsTable } from './StandingsTable';
@@ -56,7 +63,7 @@ export function LeagueDetailScreen({ leagueId }: Props) {
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
   const activeSeasonId = selectedSeasonId ?? currentSeasonId;
 
-  const { data: standingRows = [], isLoading: standingsLoading } = useLeagueStandings(activeSeasonId);
+  const { data: standingGroups = [], isLoading: standingsLoading } = useLeagueStandingsGrouped(activeSeasonId);
 
   const { data: topScorers = [], isLoading: scorersLoading } = useQuery({
     queryKey: ['league-top-scorers', activeSeasonId],
@@ -195,17 +202,44 @@ export function LeagueDetailScreen({ leagueId }: Props) {
               <View style={styles.loading}>
                 <Text style={[styles.loadingText, { color: colors.textMuted }]}>Sæki töflu…</Text>
               </View>
-            ) : standingRows.length === 0 ? (
+            ) : standingGroups.length === 0 ? (
               <View style={styles.loading}>
                 <Text style={[styles.loadingText, { color: colors.textMuted }]}>Engar niðurstöður</Text>
               </View>
             ) : (
-              <StandingsTable
-                rows={standingRows}
-                mode={viewMode}
-                leagueId={leagueId}
-                liveTeamIds={liveTeamIds}
-              />
+              standingGroups.map((group) => {
+                let zoneRules: Record<number, 'promotion' | 'playoff' | 'relegation'> | undefined;
+                let zoneLabels: ZoneLabels | undefined;
+                if (group.type === 'championship') {
+                  zoneRules = EFRI_HLUTI_ZONE_RULES[leagueId] ?? {};
+                  zoneLabels = EFRI_HLUTI_ZONE_LABELS[leagueId];
+                } else if (group.type === 'relegation') {
+                  zoneRules = NEDRI_HLUTI_ZONE_RULES[leagueId] ?? {};
+                  zoneLabels = NEDRI_HLUTI_ZONE_LABELS[leagueId];
+                }
+                // For 'regular' groups, zoneRules/zoneLabels stay undefined → StandingsTable
+                // falls back to ZONE_RULES[leagueId] with the default league legend labels.
+
+                return (
+                  <View key={`${group.label || 'main'}-${group.stageId ?? 0}`}>
+                    {group.label ? (
+                      <View style={styles.sectionHeader}>
+                        <Text style={[styles.sectionHeaderText, { color: colors.textMuted }]}>
+                          {group.label}
+                        </Text>
+                      </View>
+                    ) : null}
+                    <StandingsTable
+                      rows={group.rows}
+                      mode={viewMode}
+                      leagueId={leagueId}
+                      liveTeamIds={liveTeamIds}
+                      zoneRules={zoneRules}
+                      zoneLabels={zoneLabels}
+                    />
+                  </View>
+                );
+              })
             )
           ) : activeTab === 'leikir' ? (
             <LeagueFixturesContent
@@ -386,5 +420,16 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: 'Manrope_500Medium',
     fontSize: 15,
+  },
+  sectionHeader: {
+    paddingHorizontal: 18,
+    paddingTop: 20,
+    paddingBottom: 6,
+  },
+  sectionHeaderText: {
+    fontFamily: 'BricolageGrotesque_700Bold',
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
 });

@@ -61,16 +61,30 @@ export function useLeagueFixtures(seasonId: number | null): UseLeagueFixturesRes
   // Resolved active round — prefer explicit selection, fall back to default
   const selectedRoundId = manualRoundId ?? defaultRoundId;
 
-  // ── Step 2: Fixtures for the active round ─────────────────────────────────
+  // For split-phase leagues the selected round may represent multiple concurrent
+  // playoff rounds (championship + relegation groups merged into one chip).
+  // Collect all round IDs we need to fetch so both groups' fixtures appear.
+  const fetchIds = useMemo<number[]>(() => {
+    if (!selectedRoundId) return [];
+    const round = rounds.find((r) => r.id === selectedRoundId);
+    return round?.mergedIds ?? [selectedRoundId];
+  }, [selectedRoundId, rounds]);
+
+  // ── Step 2: Fixtures for the active round(s) ─────────────────────────────
   const {
     data: fixtures = [],
     isLoading: fixturesLoading,
     error: fixturesError,
     refetch: refetchFixtures,
   } = useQuery({
-    queryKey: ['round-fixtures', selectedRoundId ?? 0],
-    queryFn: () => fetchFixturesForRound(selectedRoundId!),
-    enabled: !!selectedRoundId,
+    queryKey: ['round-fixtures', fetchIds],
+    queryFn: async () => {
+      const results = await Promise.all(fetchIds.map((id) => fetchFixturesForRound(id)));
+      return results
+        .flat()
+        .sort((a, b) => (a.starting_at ?? '').localeCompare(b.starting_at ?? ''));
+    },
+    enabled: fetchIds.length > 0,
     staleTime: 30_000,
     // Live-poll when any fixture in this round is currently playing
     refetchInterval: (query) => {
