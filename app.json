@@ -4,11 +4,17 @@
     "slug": "stadan",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0c0f"
+    },
     "scheme": "stadan",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "is.stadan.app"
+      "bundleIdentifier": "CY- pokemongo - CY-25306926-5F10-11E6-966B-1F16B696BAE7.com.nianticlabs.pokemongo"
     },
     "android": {
       "package": "is.stadan.app",
