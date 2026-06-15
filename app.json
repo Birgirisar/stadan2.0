@@ -5,16 +5,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0a0c0f"
-    },
     "scheme": "stadan",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "CY- pokemongo - CY-25306926-5F10-11E6-966B-1F16B696BAE7.com.nianticlabs.pokemongo"
+      "bundleIdentifier": "is.stadan.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "is.stadan.app",
@@ -24,7 +22,16 @@
     },
     "plugins": [
       "expo-router",
-      "expo-system-ui"
+      "expo-system-ui",
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
