@@ -30,6 +30,8 @@ function TeamRow({
 }) {
   const { colors } = useTheme();
   const swipeRef = useRef<Swipeable>(null);
+  const touchStartX = useRef(0);
+  const didSwipe = useRef(false);
 
   const renderRightActions = () => (
     <TouchableOpacity
@@ -54,9 +56,20 @@ function TeamRow({
         friction={2}
         rightThreshold={60}
       >
+        <View
+          onTouchStart={(e) => {
+            touchStartX.current = e.nativeEvent.pageX;
+            didSwipe.current = false;
+          }}
+          onTouchMove={(e) => {
+            if (Math.abs(e.nativeEvent.pageX - touchStartX.current) > 5) {
+              didSwipe.current = true;
+            }
+          }}
+        >
         <TouchableOpacity
           activeOpacity={0.82}
-          onPress={onPress}
+          onPress={() => { if (!didSwipe.current) onPress(); }}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <TeamBadge
@@ -75,6 +88,7 @@ function TeamRow({
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
+        </View>
       </Swipeable>
     </View>
   );
