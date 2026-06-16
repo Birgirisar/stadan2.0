@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LEAGUES } from '../../constants/leagues';
@@ -123,6 +123,16 @@ export default function LeikirScreen() {
 
   const { data: fixtures = [], isLoading, isFetching, error, refetch } = useFixturesByDate(selectedDate);
 
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  const handleManualRefresh = useCallback(async () => {
+    setIsManualRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  }, [refetch]);
+
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
   const gradStart = theme === 'dark' ? '#0b120f' : '#ecf5f0';
   const gradEnd = colors.bg;
@@ -202,8 +212,8 @@ export default function LeikirScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={isFetching}
-            onRefresh={refetch}
+            refreshing={isManualRefreshing}
+            onRefresh={handleManualRefresh}
             tintColor={colors.text}
             colors={[colors.text]}
             progressViewOffset={headerHeight}
@@ -223,15 +233,20 @@ export default function LeikirScreen() {
             <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
               {sectionLabel}
             </Text>
-            <View
-              style={[
-                styles.countBadge,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              <Text style={[styles.countText, { color: colors.textMuted }]}>
-                {totalCount} leikir
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {isFetching && !isManualRefreshing && (
+                <Text style={[styles.countText, { color: colors.textMuted }]}>Uppfærir…</Text>
+              )}
+              <View
+                style={[
+                  styles.countBadge,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+              >
+                <Text style={[styles.countText, { color: colors.textMuted }]}>
+                  {totalCount} leikir
+                </Text>
+              </View>
             </View>
           </View>
         )}
