@@ -21,6 +21,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AppState, type AppStateStatus, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Pause React Query polling when the app is backgrounded / screen locked,
 // resume when it comes back to the foreground.
@@ -82,11 +83,13 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemedStatusBar />
-        <AppShell />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemedStatusBar />
+          <AppShell />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
