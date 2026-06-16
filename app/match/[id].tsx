@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  PanResponder,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -121,6 +122,33 @@ export default function MatchDetailScreen() {
     }
   }, [fixture]);
 
+  // Ref so PanResponder closure always sees latest tab state without being recreated
+  const shiftTab = useRef<(delta: number) => void>(() => {});
+  useEffect(() => {
+    shiftTab.current = (delta: number) => {
+      if (!fixture) return;
+      const available = getAvailableSubTabs(fixture);
+      const currentIdx = available.findIndex((t) => t.id === activeTab);
+      if (currentIdx === -1) return;
+      const nextIdx = currentIdx + delta;
+      if (nextIdx >= 0 && nextIdx < available.length) {
+        setActiveTab(available[nextIdx].id);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      }
+    };
+  }, [fixture, activeTab]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+        Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 12,
+      onPanResponderRelease: (_, { dx }) => {
+        if (dx < -100) shiftTab.current(1);
+        else if (dx > 100) shiftTab.current(-1);
+      },
+    })
+  ).current;
+
   const scrollHandler = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     { useNativeDriver: false },
@@ -151,7 +179,7 @@ export default function MatchDetailScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+    <View style={[styles.screen, { backgroundColor: colors.bg }]} {...panResponder.panHandlers}>
       {/* Scrollable content */}
       <Animated.ScrollView
         ref={scrollViewRef}
