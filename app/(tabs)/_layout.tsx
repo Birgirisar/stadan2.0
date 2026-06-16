@@ -14,7 +14,7 @@ export default function TabsLayout() {
       >
         <Tabs.Screen name="index" options={{ title: 'Leikir' }} />
         <Tabs.Screen name="mot" options={{ title: 'Mót' }} />
-        <Tabs.Screen name="frettir" options={{ title: 'Fréttir' }} />
+        <Tabs.Screen name="minlid" options={{ title: 'Mín lið' }} />
       </Tabs>
     </View>
   );
