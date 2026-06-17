@@ -125,11 +125,28 @@ export function LeagueDetailScreen({ leagueId }: Props) {
   const nextTabIdRef = useRef<LeagueSubTabId | null>(null);
   const isCommittingRef = useRef(false);
   const swipeLockedRef = useRef(false);
+  const scrollAnim = useRef(new Animated.Value(0)).current;
   const [frozenPrevTab, setFrozenPrevTab] = useState<LeagueSubTabId | null>(null);
   const [frozenNextTab, setFrozenNextTab] = useState<LeagueSubTabId | null>(null);
 
   // Total height of the fixed header overlay (topbar + league header + subtabs)
   const totalHeaderH = topBarH + leagueHeaderHeight + SUBTABS_HEIGHT;
+
+  const leagueHeaderTranslateY = scrollAnim.interpolate({
+    inputRange: [0, leagueHeaderHeight],
+    outputRange: [0, -leagueHeaderHeight],
+    extrapolate: 'clamp',
+  });
+  const leagueHeaderOpacity = scrollAnim.interpolate({
+    inputRange: [0, leagueHeaderHeight * 0.7],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const topbarTitleOpacity = scrollAnim.interpolate({
+    inputRange: [leagueHeaderHeight * 0.6, leagueHeaderHeight],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   // Compute flanking tabs and keep refs in sync for PanResponder closure
   const currentTabIdx = LEAGUE_TABS.indexOf(activeTab);
@@ -172,6 +189,7 @@ export function LeagueDetailScreen({ leagueId }: Props) {
     currentPanelOpacity.setValue(1);
     prevPanelX.setValue(-sw);
     nextPanelX.setValue(sw);
+    scrollAnim.setValue(0);
     requestAnimationFrame(() => {
       setFrozenPrevTab(null);
       setFrozenNextTab(null);
@@ -216,6 +234,7 @@ export function LeagueDetailScreen({ leagueId }: Props) {
             Animated.timing(nextPanelX, { toValue: 0, duration: 220, useNativeDriver: false }),
           ]).start(() => {
             scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+            scrollAnim.setValue(0);
             setFrozenNextTab(nextTabIdRef.current);
             currentPanelOpacity.setValue(0);
             isCommittingRef.current = true;
@@ -229,6 +248,7 @@ export function LeagueDetailScreen({ leagueId }: Props) {
             Animated.timing(prevPanelX, { toValue: 0, duration: 220, useNativeDriver: false }),
           ]).start(() => {
             scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+            scrollAnim.setValue(0);
             setFrozenPrevTab(prevTabIdRef.current);
             currentPanelOpacity.setValue(0);
             isCommittingRef.current = true;
@@ -364,18 +384,22 @@ export function LeagueDetailScreen({ leagueId }: Props) {
           contentContainerStyle={{ paddingTop: totalHeaderH, paddingBottom: insets.bottom + 100 }}
           showsVerticalScrollIndicator={false}
           scrollEventThrottle={16}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollAnim } } }],
+            { useNativeDriver: false },
+          )}
         >
           {renderTabContent(activeTab)}
         </ScrollView>
       </Animated.View>
 
       {/* Fixed header overlay — league header + subtabs sit above panels */}
-      <View
-        style={{ position: 'absolute', top: topBarH, left: 0, right: 0 }}
+      <Animated.View
+        style={{ position: 'absolute', top: topBarH, left: 0, right: 0, transform: [{ translateY: leagueHeaderTranslateY }] }}
         pointerEvents="box-none"
       >
-        <View
-          style={[styles.leagueHeader, { backgroundColor: colors.bg }]}
+        <Animated.View
+          style={[styles.leagueHeader, { backgroundColor: colors.bg, opacity: leagueHeaderOpacity }]}
           onLayout={(e) => setLeagueHeaderHeight(e.nativeEvent.layout.height)}
           pointerEvents="none"
         >
@@ -402,11 +426,11 @@ export function LeagueDetailScreen({ leagueId }: Props) {
               <Text style={[styles.leagueSub, { color: colors.textMuted }]}>{subLine}</Text>
             ) : null}
           </View>
-        </View>
+        </Animated.View>
         <View style={{ backgroundColor: colors.bg }} pointerEvents="auto">
           <LeagueSubTabs active={activeTab} onChange={setActiveTab} />
         </View>
-      </View>
+      </Animated.View>
 
       {/* Top bar — back button + season selector */}
       <View style={[styles.topbar, { top: 0 }]} pointerEvents="box-none">
@@ -430,7 +454,11 @@ export function LeagueDetailScreen({ leagueId }: Props) {
             <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
 
-          <View style={{ flex: 1 }} />
+          <Animated.View style={{ flex: 1, alignItems: 'center', opacity: topbarTitleOpacity }}>
+            <Text style={[styles.topbarTitle, { color: colors.text }]} numberOfLines={1}>
+              {leagueName}
+            </Text>
+          </Animated.View>
 
           <View style={styles.topbarActions} pointerEvents="auto">
             {activeSeasonYear ? (
@@ -499,6 +527,11 @@ const styles = StyleSheet.create({
   seasonPillText: {
     fontFamily: 'Manrope_700Bold',
     fontSize: 12,
+  },
+  topbarTitle: {
+    fontFamily: 'BricolageGrotesque_800ExtraBold',
+    fontSize: 16,
+    letterSpacing: -0.3,
   },
   leagueHeader: {
     flexDirection: 'row',
