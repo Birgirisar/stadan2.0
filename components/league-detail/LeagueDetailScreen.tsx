@@ -395,7 +395,7 @@ export function LeagueDetailScreen({ leagueId }: Props) {
 
       {/* Fixed header overlay — league header + subtabs sit above panels */}
       <Animated.View
-        style={{ position: 'absolute', top: topBarH, left: 0, right: 0, transform: [{ translateY: leagueHeaderTranslateY }] }}
+        style={{ position: 'absolute', top: topBarH, left: 0, right: 0, backgroundColor: colors.bg, transform: [{ translateY: leagueHeaderTranslateY }] }}
         pointerEvents="box-none"
       >
         <Animated.View
