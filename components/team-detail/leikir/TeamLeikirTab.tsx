@@ -12,7 +12,7 @@ interface Props {
   isLoading: boolean;
   error: Error | null;
   onRetry: () => void;
-  scrollViewRef: React.RefObject<any>;
+  scrollViewRef?: React.RefObject<any>;
   heroFull: number;
   compactH: number;
 }

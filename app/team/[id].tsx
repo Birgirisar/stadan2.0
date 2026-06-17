@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  PanResponder,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,12 +31,11 @@ import { TopScorersList } from '../../components/team-detail/TopScorersList';
 import { SeasonStatsGrid } from '../../components/team-detail/SeasonStatsGrid';
 import { StadiumCard } from '../../components/team-detail/StadiumCard';
 
-// Height of the compact top-bar content zone — mirrors HeroCollapsing's COMPACT_CONTENT_H
 const CONTENT_H = 52;
-// Height of the sub-tabs strip — mirrors HERO_SUBTABS_H
 const SUBTABS_H = 46;
-// Rough estimate for TeamHeader height before measurement fires
 const TEAM_HEADER_ESTIMATE = 200;
+
+const TEAM_TABS: readonly TeamSubTabId[] = ['yfirlit', 'leikir', 'leikmenn', 'timabil'];
 
 export default function TeamDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,13 +43,11 @@ export default function TeamDetailScreen() {
   const router = useRouter();
   const { colors, theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
 
-  // ── Hero sizing ────────────────────────────────────────────────────────────
   const TOP_BAR_H = insets.top + CONTENT_H;
-  // Minimum height when fully collapsed: just top-bar + sub-tabs
   const COMPACT_H = TOP_BAR_H + SUBTABS_H;
 
-  // ── Same gradient as HeroCollapsing ───────────────────────────────────────
   const gradStart = theme === 'dark' ? '#0b120f' : '#ecf5f0';
   const gradEnd = colors.bg;
 
@@ -75,14 +74,11 @@ export default function TeamDetailScreen() {
 
   // ── UI state ───────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TeamSubTabId>('yfirlit');
-  // Measured height of the TeamHeader block (crest + name + meta chips).
-  // Initialised to an estimate so layout is stable on first paint.
   const [teamHeaderH, setTeamHeaderH] = useState(TEAM_HEADER_ESTIMATE);
 
-  // Ref for the outer scroll view — used by TeamLeikirTab to auto-scroll to anchor
-  const scrollViewRef = useRef<any>(null);
+  const scrollViewRef = useRef<import('react-native').ScrollView>(null);
 
-  // ── Leikir tab data — only fetched when that tab is active ────────────────
+  // ── Leikir tab data ────────────────────────────────────────────────────────
   const {
     fixtures: leikirFixtures,
     isLoading: leikirLoading,
@@ -91,11 +87,11 @@ export default function TeamDetailScreen() {
     isRefetching: leikirRefetching,
   } = useTeamFixtures(teamId, activeTab === 'leikir' ? (seasonId ?? undefined) : undefined);
 
-  // Full hero height (expanded) and collapse range derived from measurement.
+  // ── Hero sizing ────────────────────────────────────────────────────────────
   const heroFull = COMPACT_H + teamHeaderH;
   const collapseRange = Math.max(teamHeaderH, 1);
 
-  // ── Scroll-driven animations ───────────────────────────────────────────────
+  // ── Scroll-driven animations (useNativeDriver: false — hero needs layout) ─
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const scrollHandler = Animated.event(
@@ -103,14 +99,11 @@ export default function TeamDetailScreen() {
     { useNativeDriver: false },
   );
 
-  // Hero height collapses from heroFull → COMPACT_H as user scrolls
   const heroHeight = scrollY.interpolate({
     inputRange: [0, collapseRange],
     outputRange: [heroFull, COMPACT_H],
     extrapolate: 'clamp',
   });
-
-  // Rich team header (crest + name + meta) fades + slides out in first 50 % of collapse
   const richOpacity = scrollY.interpolate({
     inputRange: [0, collapseRange * 0.5],
     outputRange: [1, 0],
@@ -121,8 +114,6 @@ export default function TeamDetailScreen() {
     outputRange: [0, -18],
     extrapolate: 'clamp',
   });
-
-  // Compact centre (badge + name) fades in during the last 35 % of collapse
   const compactOpacity = scrollY.interpolate({
     inputRange: [collapseRange * 0.6, collapseRange * 0.95],
     outputRange: [0, 1],
@@ -134,10 +125,121 @@ export default function TeamDetailScreen() {
     extrapolate: 'clamp',
   });
 
+  // ── Panel animations ───────────────────────────────────────────────────────
+  // useNativeDriver: false keeps setValue in useEffect batched with React tree
+  // updates so there is no race-condition flash on commit.
+  const currentPanelX = useRef(new Animated.Value(0)).current;
+  const prevPanelX = useRef(new Animated.Value(-screenWidth)).current;
+  const nextPanelX = useRef(new Animated.Value(screenWidth)).current;
+  const currentPanelOpacity = useRef(new Animated.Value(1)).current;
+  const screenWidthRef = useRef(screenWidth);
+  const activeTabRef = useRef(activeTab);
+  const prevTabIdRef = useRef<TeamSubTabId | null>(null);
+  const nextTabIdRef = useRef<TeamSubTabId | null>(null);
+  const isCommittingRef = useRef(false);
+  const scrollYRef = useRef(0);
+  const collapseRangeRef = useRef(collapseRange);
+  const [frozenPrevTab, setFrozenPrevTab] = useState<TeamSubTabId | null>(null);
+  const [frozenNextTab, setFrozenNextTab] = useState<TeamSubTabId | null>(null);
+
+  // Keep refs in sync every render
+  const currentTabIdx = TEAM_TABS.indexOf(activeTab);
+  const prevTabId: TeamSubTabId | null = currentTabIdx > 0 ? TEAM_TABS[currentTabIdx - 1] : null;
+  const nextTabId: TeamSubTabId | null = currentTabIdx < TEAM_TABS.length - 1 ? TEAM_TABS[currentTabIdx + 1] : null;
+  prevTabIdRef.current = prevTabId;
+  nextTabIdRef.current = nextTabId;
+  screenWidthRef.current = screenWidth;
+  activeTabRef.current = activeTab;
+  collapseRangeRef.current = collapseRange;
+
+  useEffect(() => {
+    const listenerId = scrollY.addListener(({ value }) => { scrollYRef.current = value; });
+    return () => scrollY.removeListener(listenerId);
+  }, []);
+
+  useEffect(() => {
+    if (!isCommittingRef.current) return;
+    isCommittingRef.current = false;
+    const sw = screenWidthRef.current;
+    currentPanelX.setValue(0);
+    currentPanelOpacity.setValue(1);
+    prevPanelX.setValue(-sw);
+    nextPanelX.setValue(sw);
+    requestAnimationFrame(() => {
+      setFrozenPrevTab(null);
+      setFrozenNextTab(null);
+    });
+  }, [activeTab]);
+
+  const springBack = () => {
+    const sw = screenWidthRef.current;
+    Animated.parallel([
+      Animated.spring(currentPanelX, { toValue: 0, tension: 120, friction: 10, useNativeDriver: false }),
+      Animated.spring(prevPanelX, { toValue: -sw, tension: 120, friction: 10, useNativeDriver: false }),
+      Animated.spring(nextPanelX, { toValue: sw, tension: 120, friction: 10, useNativeDriver: false }),
+    ]).start();
+  };
+
+  const panResponder = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+      Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 12,
+    onPanResponderMove: (_, { dx }) => {
+      const clamped =
+        (dx > 0 && !prevTabIdRef.current) || (dx < 0 && !nextTabIdRef.current)
+          ? dx * 0.25
+          : dx;
+      currentPanelX.setValue(clamped);
+      prevPanelX.setValue(-screenWidthRef.current + clamped);
+      nextPanelX.setValue(screenWidthRef.current + clamped);
+    },
+    onPanResponderRelease: (_, { dx }) => {
+      if (
+        Math.abs(dx) > 100 &&
+        ((dx < 0 && nextTabIdRef.current) || (dx > 0 && prevTabIdRef.current))
+      ) {
+        const delta = dx < 0 ? 1 : -1;
+        const sw = screenWidthRef.current;
+        if (delta === 1) {
+          prevPanelX.setValue(-sw);
+          Animated.parallel([
+            Animated.timing(currentPanelX, { toValue: -sw, duration: 220, useNativeDriver: false }),
+            Animated.timing(nextPanelX, { toValue: 0, duration: 220, useNativeDriver: false }),
+          ]).start(() => {
+            const cy = scrollYRef.current;
+            const range = collapseRangeRef.current;
+            scrollViewRef.current?.scrollTo({ y: cy >= range ? range : 0, animated: false });
+            setFrozenNextTab(nextTabIdRef.current);
+            currentPanelOpacity.setValue(0);
+            isCommittingRef.current = true;
+            const idx = TEAM_TABS.indexOf(activeTabRef.current);
+            if (idx + 1 < TEAM_TABS.length) setActiveTab(TEAM_TABS[idx + 1]);
+          });
+        } else {
+          nextPanelX.setValue(sw);
+          Animated.parallel([
+            Animated.timing(currentPanelX, { toValue: sw, duration: 220, useNativeDriver: false }),
+            Animated.timing(prevPanelX, { toValue: 0, duration: 220, useNativeDriver: false }),
+          ]).start(() => {
+            const cy = scrollYRef.current;
+            const range = collapseRangeRef.current;
+            scrollViewRef.current?.scrollTo({ y: cy >= range ? range : 0, animated: false });
+            setFrozenPrevTab(prevTabIdRef.current);
+            currentPanelOpacity.setValue(0);
+            isCommittingRef.current = true;
+            const idx = TEAM_TABS.indexOf(activeTabRef.current);
+            if (idx - 1 >= 0) setActiveTab(TEAM_TABS[idx - 1]);
+          });
+        }
+      } else {
+        springBack();
+      }
+    },
+    onPanResponderTerminate: () => springBack(),
+  })).current;
+
   const leagueName = leagueId
     ? (LEAGUES as Record<number, { displayName: string }>)[leagueId]?.displayName ?? null
     : null;
-
   const inSupportedLeague = leagueId != null && !!(LEAGUES as Record<number, unknown>)[leagueId];
 
   // ── Loading / Error states ─────────────────────────────────────────────────
@@ -165,18 +267,101 @@ export default function TeamDetailScreen() {
     );
   }
 
-  return (
-    <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+  const renderTabContent = (tabId: TeamSubTabId, preview = false) => {
+    switch (tabId) {
+      case 'yfirlit':
+        return (
+          <YfirliContent
+            teamId={teamId}
+            leagueId={leagueId}
+            leagueName={leagueName}
+            inSupportedLeague={inSupportedLeague}
+            nextMatch={nextMatch}
+            lastMatch={lastMatch}
+            form={form}
+            recentFixtures={recentFixtures}
+            standings={standings}
+            topScorers={topScorers}
+            topAssists={topAssists}
+            seasonStats={seasonStats}
+            venue={team?.venue ?? null}
+            scheduleLoading={scheduleLoading}
+          />
+        );
+      case 'leikir':
+        return (
+          <TeamLeikirTab
+            seasonId={seasonId}
+            fixtures={leikirFixtures}
+            isLoading={leikirLoading}
+            error={leikirError}
+            onRetry={refetchLeikir}
+            scrollViewRef={preview ? undefined : scrollViewRef}
+            heroFull={heroFull}
+            compactH={COMPACT_H}
+          />
+        );
+      default:
+        return <PlaceholderContent />;
+    }
+  };
 
-      {/* ── Hero overlay — collapses like HeroCollapsing ─────────────────────
-       *  Gradient flows from top of screen through the full team header and
-       *  clamps to a compact bar (back btn · badge+name · follow btn · subtabs)
-       *  as the user scrolls into the content.
-       * ─────────────────────────────────────────────────────────────────── */}
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.bg }]} {...panResponder.panHandlers}>
+
+      {/* Previous tab panel — off-screen left */}
+      {(frozenPrevTab ?? prevTabId) && (
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { transform: [{ translateX: prevPanelX }] }]}
+          pointerEvents="none"
+        >
+          <View style={{ paddingTop: heroFull }}>
+            {renderTabContent((frozenPrevTab ?? prevTabId)!, true)}
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Next tab panel — off-screen right */}
+      {(frozenNextTab ?? nextTabId) && (
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { transform: [{ translateX: nextPanelX }] }]}
+          pointerEvents="none"
+        >
+          <View style={{ paddingTop: heroFull }}>
+            {renderTabContent((frozenNextTab ?? nextTabId)!, true)}
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Current tab — interactive with vertical scroll */}
+      <Animated.View style={{ flex: 1, transform: [{ translateX: currentPanelX }], opacity: currentPanelOpacity }}>
+        <Animated.ScrollView
+          ref={scrollViewRef}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: heroFull, paddingBottom: insets.bottom + 110 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            activeTab === 'leikir' ? (
+              <RefreshControl
+                refreshing={leikirRefetching}
+                onRefresh={refetchLeikir}
+                tintColor={colors.textMuted}
+              />
+            ) : undefined
+          }
+        >
+          {renderTabContent(activeTab)}
+        </Animated.ScrollView>
+      </Animated.View>
+
+      {/* Hero overlay — rendered last so it sits above all panels (zIndex: 10) */}
       <Animated.View
         style={[styles.hero, { height: heroHeight, backgroundColor: colors.surface }]}
       >
-        {/* Background gradient — first child renders behind everything */}
         <LinearGradient
           colors={[gradStart, gradEnd]}
           style={StyleSheet.absoluteFill}
@@ -185,18 +370,12 @@ export default function TeamDetailScreen() {
           pointerEvents="none"
         />
 
-        {/* ── Fixed top-bar controls row ──────────────────────────────────
-         *  Back button (left) · animated compact centre · Follow button (right)
-         *  All items share alignItems:'center' in the CONTENT_H zone, exactly
-         *  mirroring HeroCollapsing's fixed-button pattern.
-         * ──────────────────────────────────────────────────────────────── */}
         <View
           style={[
             styles.topBarContent,
             { position: 'absolute', top: insets.top, left: 0, right: 0 },
           ]}
         >
-          {/* Back button — 44 × 44 circle */}
           <Pressable
             onPress={() => router.back()}
             style={[
@@ -208,7 +387,6 @@ export default function TeamDetailScreen() {
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </Pressable>
 
-          {/* Compact centre — badge + name, fades in as hero collapses */}
           <Animated.View
             style={[
               styles.topBarCenter,
@@ -234,7 +412,6 @@ export default function TeamDetailScreen() {
             )}
           </Animated.View>
 
-          {/* Follow button */}
           <Pressable
             onPress={() => toggle(teamId)}
             style={({ pressed }) => [
@@ -257,7 +434,6 @@ export default function TeamDetailScreen() {
           </Pressable>
         </View>
 
-        {/* ── Rich team header — fades + slides up as hero collapses ───── */}
         {team && (
           <Animated.View
             style={{
@@ -274,69 +450,11 @@ export default function TeamDetailScreen() {
           </Animated.View>
         )}
 
-        {/* Sub-tabs strip — pinned to the bottom of the hero at all times */}
         <View style={styles.subTabsAnchor}>
           <TeamSubTabs activeTab={activeTab} onTabChange={setActiveTab} />
         </View>
       </Animated.View>
 
-      {/* ── Scrollable content — starts below the full (expanded) hero ───── */}
-      <Animated.ScrollView
-        ref={scrollViewRef}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: heroFull, paddingBottom: insets.bottom + 110 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          activeTab === 'leikir' ? (
-            <RefreshControl
-              refreshing={leikirRefetching}
-              onRefresh={refetchLeikir}
-              tintColor={colors.textMuted}
-            />
-          ) : undefined
-        }
-      >
-        {/* ── Yfirlit tab ──────────────────────────────────────────────── */}
-        {activeTab === 'yfirlit' && (
-          <YfirliContent
-            teamId={teamId}
-            leagueId={leagueId}
-            leagueName={leagueName}
-            inSupportedLeague={inSupportedLeague}
-            nextMatch={nextMatch}
-            lastMatch={lastMatch}
-            form={form}
-            recentFixtures={recentFixtures}
-            standings={standings}
-            topScorers={topScorers}
-            topAssists={topAssists}
-            seasonStats={seasonStats}
-            venue={team?.venue ?? null}
-            scheduleLoading={scheduleLoading}
-          />
-        )}
-
-        {/* ── Leikir tab ───────────────────────────────────────────────── */}
-        {activeTab === 'leikir' && (
-          <TeamLeikirTab
-            seasonId={seasonId}
-            fixtures={leikirFixtures}
-            isLoading={leikirLoading}
-            error={leikirError}
-            onRetry={refetchLeikir}
-            scrollViewRef={scrollViewRef}
-            heroFull={heroFull}
-            compactH={COMPACT_H}
-          />
-        )}
-
-        {/* ── Placeholder tabs ─────────────────────────────────────────── */}
-        {activeTab !== 'yfirlit' && activeTab !== 'leikir' && <PlaceholderContent />}
-      </Animated.ScrollView>
     </View>
   );
 }
@@ -379,7 +497,6 @@ function YfirliContent({
   const { colors } = useTheme();
   return (
     <>
-      {/* Leikir section — next + last match cards side by side */}
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Leikir</Text>
       </View>
@@ -395,12 +512,10 @@ function YfirliContent({
         </View>
       )}
 
-      {/* Form — only if we have data */}
       {form.length > 0 && (
         <RecentFormGrid form={form} fixtures={recentFixtures} teamId={teamId} />
       )}
 
-      {/* Mini position — only for supported leagues */}
       {inSupportedLeague && standings && standings.length > 0 && (
         <MiniPositionCard
           standings={standings as any}
@@ -410,22 +525,18 @@ function YfirliContent({
         />
       )}
 
-      {/* Top scorers — only if we have any */}
       {inSupportedLeague && topScorers.length > 0 && (
         <TopScorersList scorers={topScorers} />
       )}
 
-      {/* Top assists — only if we have any */}
       {inSupportedLeague && topAssists.length > 0 && (
         <TopScorersList scorers={topAssists} title="Stoðsendingar" />
       )}
 
-      {/* Season stats — only for supported leagues */}
       {inSupportedLeague && seasonStats && (
         <SeasonStatsGrid stats={seasonStats} />
       )}
 
-      {/* Stadium — only if venue data exists */}
       {venue && <StadiumCard venue={venue} />}
 
       <View style={{ height: 32 }} />
@@ -451,17 +562,15 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
   scrollContent: {},
 
-  // Collapsing hero overlay — same structural pattern as HeroCollapsing
   hero: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    overflow: 'hidden', // clips the rich team header as it slides out of view
+    overflow: 'hidden',
     zIndex: 10,
   },
 
-  // CONTENT_H-tall controls row: back btn · flex centre · follow btn
   topBarContent: {
     height: CONTENT_H,
     flexDirection: 'row',
@@ -470,7 +579,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  // 44 × 44 circle button — identical to HeroCollapsing's roundBtn
   roundBtn: {
     width: 44,
     height: 44,
@@ -481,7 +589,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  // Flexible centre slot — compact badge + name fades in here
   topBarCenter: {
     flex: 1,
     alignItems: 'center',
@@ -498,7 +605,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
 
-  // Follow pill button
   followBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -514,7 +620,6 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
   },
 
-  // Sub-tabs pinned to the bottom of the hero at all scroll positions
   subTabsAnchor: {
     position: 'absolute',
     bottom: 0,
@@ -522,7 +627,6 @@ const styles = StyleSheet.create({
     right: 0,
   },
 
-  // Content sections
   sectionHeader: {
     paddingHorizontal: 16,
     paddingTop: 20,
@@ -545,7 +649,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Placeholder
   placeholderWrap: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -557,7 +660,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  // Error
   errorText: {
     fontFamily: 'Manrope_500Medium',
     fontSize: 15,
