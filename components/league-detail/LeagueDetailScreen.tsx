@@ -2,15 +2,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   Animated,
   Image,
   ImageSourcePropType,
+  PanResponder,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 
 const LOCAL_LEAGUE_IMAGES: Record<number, ImageSourcePropType> = {
@@ -35,7 +38,7 @@ import {
   NEDRI_HLUTI_ZONE_LABELS,
   type ZoneLabels,
 } from '../../constants/leagues';
-import { LeagueSubTabs, type LeagueSubTabId } from './LeagueSubTabs';
+import { LeagueSubTabs, SUBTABS_HEIGHT, type LeagueSubTabId } from './LeagueSubTabs';
 import { ViewToggle, type ViewMode } from './ViewToggle';
 import { StandingsTable } from './StandingsTable';
 import { SeasonDropdown } from './SeasonDropdown';
@@ -45,6 +48,7 @@ import { RoundSelector } from './RoundSelector';
 import { LeagueFixturesContent } from './LeagueFixturesContent';
 
 const TOPBAR_BASE_H = 60;
+const LEAGUE_TABS: readonly LeagueSubTabId[] = ['tafla', 'leikir', 'leikmenn', 'lid', 'timabil'];
 
 interface Props {
   leagueId: number;
@@ -54,6 +58,7 @@ export function LeagueDetailScreen({ leagueId }: Props) {
   const router = useRouter();
   const { colors, theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
 
   const topBarH = insets.top + TOPBAR_BASE_H;
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
@@ -104,20 +109,35 @@ export function LeagueDetailScreen({ leagueId }: Props) {
   const [activeTab, setActiveTab] = useState<LeagueSubTabId>('tafla');
   const [viewMode, setViewMode] = useState<ViewMode>('tafla');
   const [seasonDropdownOpen, setSeasonDropdownOpen] = useState(false);
-
-  const scrollY = useRef(new Animated.Value(0)).current;
   const [leagueHeaderHeight, setLeagueHeaderHeight] = useState(80);
 
-  const titleOpacity = scrollY.interpolate({
-    inputRange: [leagueHeaderHeight - 60, leagueHeaderHeight],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  const titleTranslateY = scrollY.interpolate({
-    inputRange: [leagueHeaderHeight - 60, leagueHeaderHeight],
-    outputRange: [6, 0],
-    extrapolate: 'clamp',
-  });
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Panel animations — useNativeDriver: false so setValue in useEffect is
+  // batched with React tree updates (no race condition / flash on commit).
+  const currentPanelX = useRef(new Animated.Value(0)).current;
+  const prevPanelX = useRef(new Animated.Value(-screenWidth)).current;
+  const nextPanelX = useRef(new Animated.Value(screenWidth)).current;
+  const currentPanelOpacity = useRef(new Animated.Value(1)).current;
+  const screenWidthRef = useRef(screenWidth);
+  const activeTabRef = useRef(activeTab);
+  const prevTabIdRef = useRef<LeagueSubTabId | null>(null);
+  const nextTabIdRef = useRef<LeagueSubTabId | null>(null);
+  const isCommittingRef = useRef(false);
+  const [frozenPrevTab, setFrozenPrevTab] = useState<LeagueSubTabId | null>(null);
+  const [frozenNextTab, setFrozenNextTab] = useState<LeagueSubTabId | null>(null);
+
+  // Total height of the fixed header overlay (topbar + league header + subtabs)
+  const totalHeaderH = topBarH + leagueHeaderHeight + SUBTABS_HEIGHT;
+
+  // Compute flanking tabs and keep refs in sync for PanResponder closure
+  const currentTabIdx = LEAGUE_TABS.indexOf(activeTab);
+  const prevTabId: LeagueSubTabId | null = currentTabIdx > 0 ? LEAGUE_TABS[currentTabIdx - 1] : null;
+  const nextTabId: LeagueSubTabId | null = currentTabIdx < LEAGUE_TABS.length - 1 ? LEAGUE_TABS[currentTabIdx + 1] : null;
+  prevTabIdRef.current = prevTabId;
+  nextTabIdRef.current = nextTabId;
+  screenWidthRef.current = screenWidth;
+  activeTabRef.current = activeTab;
 
   const leagueInfo = LEAGUES[leagueId as keyof typeof LEAGUES];
   const leagueName = leagueInfo?.displayName ?? league?.name ?? '';
@@ -140,21 +160,214 @@ export function LeagueDetailScreen({ leagueId }: Props) {
   const gradStart = theme === 'dark' ? '#0b120f' : '#ecf5f0';
   const gradEnd = colors.bg;
 
+  // After setActiveTab commits: snap panels to resting positions.
+  // useEffect (fires after paint) + useNativeDriver: false ensures setValue
+  // is processed in the same UIManager batch as React tree updates — no flash.
+  useEffect(() => {
+    if (!isCommittingRef.current) return;
+    isCommittingRef.current = false;
+    const sw = screenWidthRef.current;
+    currentPanelX.setValue(0);
+    currentPanelOpacity.setValue(1);
+    prevPanelX.setValue(-sw);
+    nextPanelX.setValue(sw);
+    requestAnimationFrame(() => {
+      setFrozenPrevTab(null);
+      setFrozenNextTab(null);
+    });
+  }, [activeTab]);
+
+  const springBack = () => {
+    const sw = screenWidthRef.current;
+    Animated.parallel([
+      Animated.spring(currentPanelX, { toValue: 0, tension: 120, friction: 10, useNativeDriver: false }),
+      Animated.spring(prevPanelX, { toValue: -sw, tension: 120, friction: 10, useNativeDriver: false }),
+      Animated.spring(nextPanelX, { toValue: sw, tension: 120, friction: 10, useNativeDriver: false }),
+    ]).start();
+  };
+
+  const panResponder = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+      Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 12,
+    onPanResponderMove: (_, { dx }) => {
+      const clamped =
+        (dx > 0 && !prevTabIdRef.current) || (dx < 0 && !nextTabIdRef.current)
+          ? dx * 0.25
+          : dx;
+      currentPanelX.setValue(clamped);
+      prevPanelX.setValue(-screenWidthRef.current + clamped);
+      nextPanelX.setValue(screenWidthRef.current + clamped);
+    },
+    onPanResponderRelease: (_, { dx }) => {
+      if (
+        Math.abs(dx) > 100 &&
+        ((dx < 0 && nextTabIdRef.current) || (dx > 0 && prevTabIdRef.current))
+      ) {
+        const delta = dx < 0 ? 1 : -1;
+        const sw = screenWidthRef.current;
+        if (delta === 1) {
+          prevPanelX.setValue(-sw);
+          Animated.parallel([
+            Animated.timing(currentPanelX, { toValue: -sw, duration: 220, useNativeDriver: false }),
+            Animated.timing(nextPanelX, { toValue: 0, duration: 220, useNativeDriver: false }),
+          ]).start(() => {
+            scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+            setFrozenNextTab(nextTabIdRef.current);
+            currentPanelOpacity.setValue(0);
+            isCommittingRef.current = true;
+            const idx = LEAGUE_TABS.indexOf(activeTabRef.current);
+            if (idx + 1 < LEAGUE_TABS.length) setActiveTab(LEAGUE_TABS[idx + 1]);
+          });
+        } else {
+          nextPanelX.setValue(sw);
+          Animated.parallel([
+            Animated.timing(currentPanelX, { toValue: sw, duration: 220, useNativeDriver: false }),
+            Animated.timing(prevPanelX, { toValue: 0, duration: 220, useNativeDriver: false }),
+          ]).start(() => {
+            scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+            setFrozenPrevTab(prevTabIdRef.current);
+            currentPanelOpacity.setValue(0);
+            isCommittingRef.current = true;
+            const idx = LEAGUE_TABS.indexOf(activeTabRef.current);
+            if (idx - 1 >= 0) setActiveTab(LEAGUE_TABS[idx - 1]);
+          });
+        }
+      } else {
+        springBack();
+      }
+    },
+    onPanResponderTerminate: () => springBack(),
+  })).current;
+
+  const renderTabContent = (tabId: LeagueSubTabId) => {
+    switch (tabId) {
+      case 'tafla':
+        return (
+          <>
+            <ViewToggle mode={viewMode} onChange={setViewMode} />
+            {standingsLoading ? (
+              <View style={styles.loading}>
+                <Text style={[styles.loadingText, { color: colors.textMuted }]}>Sæki töflu…</Text>
+              </View>
+            ) : standingGroups.length === 0 ? (
+              <View style={styles.loading}>
+                <Text style={[styles.loadingText, { color: colors.textMuted }]}>Engar niðurstöður</Text>
+              </View>
+            ) : (
+              standingGroups.map((group) => {
+                let zoneRules: Record<number, 'promotion' | 'playoff' | 'relegation'> | undefined;
+                let zoneLabels: ZoneLabels | undefined;
+                if (group.type === 'championship') {
+                  zoneRules = EFRI_HLUTI_ZONE_RULES[leagueId] ?? {};
+                  zoneLabels = EFRI_HLUTI_ZONE_LABELS[leagueId];
+                } else if (group.type === 'relegation') {
+                  zoneRules = NEDRI_HLUTI_ZONE_RULES[leagueId] ?? {};
+                  zoneLabels = NEDRI_HLUTI_ZONE_LABELS[leagueId];
+                }
+                return (
+                  <View key={`${group.label || 'main'}-${group.stageId ?? 0}`}>
+                    {group.label ? (
+                      <View style={styles.sectionHeader}>
+                        <Text style={[styles.sectionHeaderText, { color: colors.textMuted }]}>
+                          {group.label}
+                        </Text>
+                      </View>
+                    ) : null}
+                    <StandingsTable
+                      rows={group.rows}
+                      mode={viewMode}
+                      leagueId={leagueId}
+                      liveTeamIds={liveTeamIds}
+                      zoneRules={zoneRules}
+                      zoneLabels={zoneLabels}
+                    />
+                  </View>
+                );
+              })
+            )}
+          </>
+        );
+      case 'leikir':
+        return (
+          <>
+            <RoundSelector
+              rounds={rounds}
+              selectedRoundId={selectedRoundId}
+              onSelect={setSelectedRoundId}
+              isLoading={roundsLoading}
+            />
+            <LeagueFixturesContent
+              fixtures={fixtures}
+              selectedRound={selectedRound}
+              roundsLoading={roundsLoading}
+              fixturesLoading={fixturesLoading}
+              roundsError={roundsError}
+              fixturesError={fixturesError}
+              onRetryRounds={refetchRounds}
+              onRetryFixtures={refetchFixtures}
+            />
+          </>
+        );
+      case 'leikmenn':
+        return scorersLoading ? (
+          <View style={styles.loading}>
+            <Text style={[styles.loadingText, { color: colors.textMuted }]}>Sæki markahæsta…</Text>
+          </View>
+        ) : (
+          <LeagueTopScorers scorers={topScorers} />
+        );
+      default:
+        return <LeaguePlaceholderTab />;
+    }
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <Animated.ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: topBarH, paddingBottom: insets.bottom + 100 }}
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-        stickyHeaderIndices={[1]}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-          useNativeDriver: true,
-        })}
+    <View style={{ flex: 1, backgroundColor: colors.bg }} {...panResponder.panHandlers}>
+      {/* Previous tab panel — off-screen left */}
+      {(frozenPrevTab ?? prevTabId) && (
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { transform: [{ translateX: prevPanelX }] }]}
+          pointerEvents="none"
+        >
+          <View style={{ paddingTop: totalHeaderH }}>
+            {renderTabContent((frozenPrevTab ?? prevTabId)!)}
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Next tab panel — off-screen right */}
+      {(frozenNextTab ?? nextTabId) && (
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { transform: [{ translateX: nextPanelX }] }]}
+          pointerEvents="none"
+        >
+          <View style={{ paddingTop: totalHeaderH }}>
+            {renderTabContent((frozenNextTab ?? nextTabId)!)}
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Current tab — interactive ScrollView */}
+      <Animated.View style={{ flex: 1, transform: [{ translateX: currentPanelX }], opacity: currentPanelOpacity }}>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={{ paddingTop: totalHeaderH, paddingBottom: insets.bottom + 100 }}
+          showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+        >
+          {renderTabContent(activeTab)}
+        </ScrollView>
+      </Animated.View>
+
+      {/* Fixed header overlay — league header + subtabs sit above panels */}
+      <View
+        style={{ position: 'absolute', top: topBarH, left: 0, right: 0 }}
+        pointerEvents="box-none"
       >
         <View
-          style={styles.leagueHeader}
+          style={[styles.leagueHeader, { backgroundColor: colors.bg }]}
           onLayout={(e) => setLeagueHeaderHeight(e.nativeEvent.layout.height)}
+          pointerEvents="none"
         >
           <View style={[styles.leagueLogo, { backgroundColor: colors.surfaceSunken, borderColor: colors.border }]}>
             {LOCAL_LEAGUE_IMAGES[leagueId] ? (
@@ -180,92 +393,12 @@ export function LeagueDetailScreen({ leagueId }: Props) {
             ) : null}
           </View>
         </View>
-
-        <View style={{ backgroundColor: colors.bg }}>
+        <View style={{ backgroundColor: colors.bg }} pointerEvents="auto">
           <LeagueSubTabs active={activeTab} onChange={setActiveTab} />
-          {activeTab === 'leikir' && (
-            <RoundSelector
-              rounds={rounds}
-              selectedRoundId={selectedRoundId}
-              onSelect={setSelectedRoundId}
-              isLoading={roundsLoading}
-            />
-          )}
-          {activeTab === 'tafla' && (
-            <ViewToggle mode={viewMode} onChange={setViewMode} />
-          )}
         </View>
+      </View>
 
-        <View>
-          {activeTab === 'tafla' ? (
-            standingsLoading ? (
-              <View style={styles.loading}>
-                <Text style={[styles.loadingText, { color: colors.textMuted }]}>Sæki töflu…</Text>
-              </View>
-            ) : standingGroups.length === 0 ? (
-              <View style={styles.loading}>
-                <Text style={[styles.loadingText, { color: colors.textMuted }]}>Engar niðurstöður</Text>
-              </View>
-            ) : (
-              standingGroups.map((group) => {
-                let zoneRules: Record<number, 'promotion' | 'playoff' | 'relegation'> | undefined;
-                let zoneLabels: ZoneLabels | undefined;
-                if (group.type === 'championship') {
-                  zoneRules = EFRI_HLUTI_ZONE_RULES[leagueId] ?? {};
-                  zoneLabels = EFRI_HLUTI_ZONE_LABELS[leagueId];
-                } else if (group.type === 'relegation') {
-                  zoneRules = NEDRI_HLUTI_ZONE_RULES[leagueId] ?? {};
-                  zoneLabels = NEDRI_HLUTI_ZONE_LABELS[leagueId];
-                }
-                // For 'regular' groups, zoneRules/zoneLabels stay undefined → StandingsTable
-                // falls back to ZONE_RULES[leagueId] with the default league legend labels.
-
-                return (
-                  <View key={`${group.label || 'main'}-${group.stageId ?? 0}`}>
-                    {group.label ? (
-                      <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionHeaderText, { color: colors.textMuted }]}>
-                          {group.label}
-                        </Text>
-                      </View>
-                    ) : null}
-                    <StandingsTable
-                      rows={group.rows}
-                      mode={viewMode}
-                      leagueId={leagueId}
-                      liveTeamIds={liveTeamIds}
-                      zoneRules={zoneRules}
-                      zoneLabels={zoneLabels}
-                    />
-                  </View>
-                );
-              })
-            )
-          ) : activeTab === 'leikir' ? (
-            <LeagueFixturesContent
-              fixtures={fixtures}
-              selectedRound={selectedRound}
-              roundsLoading={roundsLoading}
-              fixturesLoading={fixturesLoading}
-              roundsError={roundsError}
-              fixturesError={fixturesError}
-              onRetryRounds={refetchRounds}
-              onRetryFixtures={refetchFixtures}
-            />
-          ) : activeTab === 'leikmenn' ? (
-            scorersLoading ? (
-              <View style={styles.loading}>
-                <Text style={[styles.loadingText, { color: colors.textMuted }]}>Sæki markahæsta…</Text>
-              </View>
-            ) : (
-              <LeagueTopScorers scorers={topScorers} />
-            )
-          ) : (
-            <LeaguePlaceholderTab />
-          )}
-        </View>
-      </Animated.ScrollView>
-
+      {/* Top bar — back button + season selector */}
       <View style={[styles.topbar, { top: 0 }]} pointerEvents="box-none">
         <BlurView
           intensity={80}
@@ -287,15 +420,7 @@ export function LeagueDetailScreen({ leagueId }: Props) {
             <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
 
-          <Animated.Text
-            style={[
-              styles.topbarTitle,
-              { color: colors.text, opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] },
-            ]}
-            numberOfLines={1}
-          >
-            {leagueName}
-          </Animated.Text>
+          <View style={{ flex: 1 }} />
 
           <View style={styles.topbarActions} pointerEvents="auto">
             {activeSeasonYear ? (
@@ -337,13 +462,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingBottom: 10,
     gap: 10,
-  },
-  topbarTitle: {
-    flex: 1,
-    fontFamily: 'BricolageGrotesque_800ExtraBold',
-    fontSize: 15,
-    letterSpacing: -0.3,
-    textAlign: 'center',
   },
   topbarActions: {
     flexDirection: 'row',
