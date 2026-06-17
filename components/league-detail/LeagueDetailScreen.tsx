@@ -124,6 +124,7 @@ export function LeagueDetailScreen({ leagueId }: Props) {
   const prevTabIdRef = useRef<LeagueSubTabId | null>(null);
   const nextTabIdRef = useRef<LeagueSubTabId | null>(null);
   const isCommittingRef = useRef(false);
+  const swipeLockedRef = useRef(false);
   const [frozenPrevTab, setFrozenPrevTab] = useState<LeagueSubTabId | null>(null);
   const [frozenNextTab, setFrozenNextTab] = useState<LeagueSubTabId | null>(null);
 
@@ -187,8 +188,11 @@ export function LeagueDetailScreen({ leagueId }: Props) {
   };
 
   const panResponder = useRef(PanResponder.create({
-    onMoveShouldSetPanResponder: (_, { dx, dy }) =>
-      Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 12,
+    onMoveShouldSetPanResponder: (_, { dx, dy }) => {
+      if (Math.abs(dx) <= Math.abs(dy) * 1.5 || Math.abs(dx) <= 12) return false;
+      if (swipeLockedRef.current) return false;
+      return true;
+    },
     onPanResponderMove: (_, { dx }) => {
       const clamped =
         (dx > 0 && !prevTabIdRef.current) || (dx < 0 && !nextTabIdRef.current)
@@ -290,12 +294,18 @@ export function LeagueDetailScreen({ leagueId }: Props) {
       case 'leikir':
         return (
           <>
-            <RoundSelector
-              rounds={rounds}
-              selectedRoundId={selectedRoundId}
-              onSelect={setSelectedRoundId}
-              isLoading={roundsLoading}
-            />
+            <View
+              onTouchStart={() => { swipeLockedRef.current = true; }}
+              onTouchEnd={() => { swipeLockedRef.current = false; }}
+              onTouchCancel={() => { swipeLockedRef.current = false; }}
+            >
+              <RoundSelector
+                rounds={rounds}
+                selectedRoundId={selectedRoundId}
+                onSelect={setSelectedRoundId}
+                isLoading={roundsLoading}
+              />
+            </View>
             <LeagueFixturesContent
               fixtures={fixtures}
               selectedRound={selectedRound}
