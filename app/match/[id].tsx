@@ -75,18 +75,33 @@ export default function MatchDetailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { height: screenHeight } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const scrollY = useRef(new Animated.Value(0)).current;
   // ScrollView is the correct ref type — Animated.ScrollView wraps it and
   // proxies scrollTo / getScrollableNode at runtime.
   const scrollViewRef = useRef<import('react-native').ScrollView>(null);
+  // Each panel owns its own position so only the two panels involved in a
+  // transition animate — the third is snapped off-screen invisibly.
+  const currentPanelX = useRef(new Animated.Value(0)).current;
+  const prevPanelX = useRef(new Animated.Value(-screenWidth)).current;
+  const nextPanelX = useRef(new Animated.Value(screenWidth)).current;
+  const currentPanelOpacity = useRef(new Animated.Value(1)).current;
+  const screenWidthRef = useRef(screenWidth);
+  const prevTabIdRef = useRef<SubTabId | null>(null);
+  const nextTabIdRef = useRef<SubTabId | null>(null);
+  const isCommittingRef = useRef(false);
+  const scrollYRef = useRef(0);
+  const collapseRangeRef = useRef(0);
+  const [frozenPrevTab, setFrozenPrevTab] = useState<SubTabId | null>(null);
+  const [frozenNextTab, setFrozenNextTab] = useState<SubTabId | null>(null);
   const [activeTab, setActiveTab] = useState<SubTabId>('yfirlit');
 
   // Dynamic hero height — starts with an estimate, updated after onLayout fires
   const [heroFull, setHeroFull] = useState(HERO_BASE_ESTIMATE + insets.top);
   const HERO_COLLAPSED = HERO_COLLAPSED_BASE + HERO_SUBTABS_H + insets.top;
   const collapseRange = Math.max(heroFull - HERO_COLLAPSED, 1);
+  collapseRangeRef.current = collapseRange;
 
   const { data: fixture, isLoading, isFetching, error, refetch } = useMatchDetail(id);
   console.log(fixture?.id);
@@ -133,19 +148,103 @@ export default function MatchDetailScreen() {
       const nextIdx = currentIdx + delta;
       if (nextIdx >= 0 && nextIdx < available.length) {
         setActiveTab(available[nextIdx].id);
-        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
       }
     };
   }, [fixture, activeTab]);
+
+  useEffect(() => {
+    const id = scrollY.addListener(({ value }) => { scrollYRef.current = value; });
+    return () => scrollY.removeListener(id);
+  }, []);
+
+  // After setActiveTab commits and the frozen panel has been visible for one
+  // paint, snap all panels back to resting positions.
+  // useEffect (fires after paint) + useNativeDriver: false means the setValue
+  // calls go through the same UIManager batch as React tree updates — no race.
+  useEffect(() => {
+    if (!isCommittingRef.current) return;
+    isCommittingRef.current = false;
+    const sw = screenWidthRef.current;
+    currentPanelX.setValue(0);
+    currentPanelOpacity.setValue(1);
+    prevPanelX.setValue(-sw);
+    nextPanelX.setValue(sw);
+    // Clear frozen panels after positions have been snapped (next frame so
+    // content change while panels are off-screen is invisible)
+    requestAnimationFrame(() => {
+      setFrozenPrevTab(null);
+      setFrozenNextTab(null);
+    });
+  }, [activeTab]);
+
+  const springBack = () => {
+    const sw = screenWidthRef.current;
+    Animated.parallel([
+      Animated.spring(currentPanelX, { toValue: 0, tension: 120, friction: 10, useNativeDriver: false }),
+      Animated.spring(prevPanelX, { toValue: -sw, tension: 120, friction: 10, useNativeDriver: false }),
+      Animated.spring(nextPanelX, { toValue: sw, tension: 120, friction: 10, useNativeDriver: false }),
+    ]).start();
+  };
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, { dx, dy }) =>
         Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 12,
-      onPanResponderRelease: (_, { dx }) => {
-        if (dx < -100) shiftTab.current(1);
-        else if (dx > 100) shiftTab.current(-1);
+      onPanResponderMove: (_, { dx }) => {
+        const clamped =
+          (dx > 0 && !prevTabIdRef.current) || (dx < 0 && !nextTabIdRef.current)
+            ? dx * 0.25
+            : dx;
+        currentPanelX.setValue(clamped);
+        prevPanelX.setValue(-screenWidthRef.current + clamped);
+        nextPanelX.setValue(screenWidthRef.current + clamped);
       },
+      onPanResponderRelease: (_, { dx }) => {
+        if (
+          Math.abs(dx) > 100 &&
+          ((dx < 0 && nextTabIdRef.current) || (dx > 0 && prevTabIdRef.current))
+        ) {
+          const delta = dx < 0 ? 1 : -1;
+          const sw = screenWidthRef.current;
+          if (delta === 1) {
+            // Swipe left: current exits left, next enters — snap prev (already off-screen)
+            prevPanelX.setValue(-sw);
+            Animated.parallel([
+              Animated.timing(currentPanelX, { toValue: -sw, duration: 220, useNativeDriver: false }),
+              Animated.timing(nextPanelX, { toValue: 0, duration: 220, useNativeDriver: false }),
+            ]).start(() => {
+              // Reset scroll to top while preserving hero collapse state
+              const cy = scrollYRef.current;
+              const range = collapseRangeRef.current;
+              scrollViewRef.current?.scrollTo({ y: cy >= range ? range : 0, animated: false });
+              // Freeze next panel content so it doesn't flash when nextTabId
+              // changes in the re-render triggered by setActiveTab below
+              setFrozenNextTab(nextTabIdRef.current);
+              currentPanelOpacity.setValue(0);
+              isCommittingRef.current = true;
+              shiftTab.current(delta);
+            });
+          } else {
+            // Swipe right: current exits right, prev enters — snap next (already off-screen)
+            nextPanelX.setValue(sw);
+            Animated.parallel([
+              Animated.timing(currentPanelX, { toValue: sw, duration: 220, useNativeDriver: false }),
+              Animated.timing(prevPanelX, { toValue: 0, duration: 220, useNativeDriver: false }),
+            ]).start(() => {
+              const cy = scrollYRef.current;
+              const range = collapseRangeRef.current;
+              scrollViewRef.current?.scrollTo({ y: cy >= range ? range : 0, animated: false });
+              setFrozenPrevTab(prevTabIdRef.current);
+              currentPanelOpacity.setValue(0);
+              isCommittingRef.current = true;
+              shiftTab.current(delta);
+            });
+          }
+        } else {
+          springBack();
+        }
+      },
+      onPanResponderTerminate: () => springBack(),
     })
   ).current;
 
@@ -178,29 +277,19 @@ export default function MatchDetailScreen() {
     );
   }
 
-  return (
-    <View style={[styles.screen, { backgroundColor: colors.bg }]} {...panResponder.panHandlers}>
-      {/* Scrollable content */}
-      <Animated.ScrollView
-        ref={scrollViewRef}
-        onScroll={scrollHandler}
-        scrollEventThrottle={1}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: heroFull, paddingBottom: insets.bottom + 110, minHeight: screenHeight + collapseRange },
-        ]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isFetching}
-            onRefresh={refetch}
-            tintColor={colors.text}
-            colors={[colors.text]}
-            progressViewOffset={heroFull}
-          />
-        }
-      >
-        {activeTab === 'yfirlit' && (
+  // Compute which tabs flank the active one — update refs used by PanResponder closure
+  const availableTabs = getAvailableSubTabs(fixture);
+  const currentTabIdx = availableTabs.findIndex((t) => t.id === activeTab);
+  const prevTabId = currentTabIdx > 0 ? availableTabs[currentTabIdx - 1].id : null;
+  const nextTabId = currentTabIdx < availableTabs.length - 1 ? availableTabs[currentTabIdx + 1].id : null;
+  prevTabIdRef.current = prevTabId;
+  nextTabIdRef.current = nextTabId;
+  screenWidthRef.current = screenWidth; // keep in sync for PanResponder closure
+
+  const renderTabContent = (tabId: SubTabId, preview = false) => {
+    switch (tabId) {
+      case 'yfirlit':
+        return (
           <YfirliContent
             fixture={fixture}
             homeTeamId={home?.id}
@@ -220,45 +309,96 @@ export default function MatchDetailScreen() {
             leagueName={leagueName}
             colors={colors}
           />
-        )}
-        {activeTab === 'lidin' && (
-          <LineupTab fixture={fixture} />
-        )}
-        {activeTab === 'lysing' && (
+        );
+      case 'lidin':
+        return <LineupTab fixture={fixture} />;
+      case 'lysing':
+        return (
           <CommentaryTab
             fixtureId={fixture.id}
             isLive={stateResult?.type === 'live' || stateResult?.type === 'halftime'}
           />
-        )}
-        {activeTab === 'tafla' && (
+        );
+      case 'tafla':
+        return (
           <TaflaTab
             seasonId={seasonId}
             leagueId={fixture.league_id}
             homeTeamId={home?.id}
             awayTeamId={away?.id}
             liveTeamIds={new Set<number>()}
-            scrollRef={scrollViewRef}
+            scrollRef={preview ? undefined : scrollViewRef}
             heroFull={heroFull}
             heroCollapsedH={HERO_COLLAPSED}
           />
-        )}
-        {activeTab === 'innbyrðis' && (
+        );
+      case 'innbyrðis':
+        return (
           <H2HTab
             homeTeam={home}
             awayTeam={away}
             currentFixtureId={fixture.id}
           />
-        )}
-        {activeTab !== 'yfirlit' &&
-          activeTab !== 'lidin' &&
-          activeTab !== 'lysing' &&
-          activeTab !== 'tafla' &&
-          activeTab !== 'innbyrðis' && (
-          <PlaceholderTab />
-        )}
-      </Animated.ScrollView>
+        );
+      default:
+        return <PlaceholderTab />;
+    }
+  };
 
-      {/* Animated hero overlay — subtabs and controls are all inside */}
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.bg }]} {...panResponder.panHandlers}>
+      {/* Previous tab — off-screen left, slides into view on right swipe */}
+      {/* frozenPrevTab keeps content stable during commit so prev panel doesn't flash wrong content */}
+      {(frozenPrevTab ?? prevTabId) && (
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { transform: [{ translateX: prevPanelX }] }]}
+          pointerEvents="none"
+        >
+          <View style={{ paddingTop: heroFull }}>
+            {renderTabContent((frozenPrevTab ?? prevTabId)!, true)}
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Next tab — off-screen right, slides into view on left swipe */}
+      {/* frozenNextTab keeps content stable during commit so next panel doesn't flash wrong content */}
+      {(frozenNextTab ?? nextTabId) && (
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { transform: [{ translateX: nextPanelX }] }]}
+          pointerEvents="none"
+        >
+          <View style={{ paddingTop: heroFull }}>
+            {renderTabContent((frozenNextTab ?? nextTabId)!, true)}
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Current tab — interactive, with vertical scroll */}
+      <Animated.View style={{ flex: 1, transform: [{ translateX: currentPanelX }], opacity: currentPanelOpacity }}>
+        <Animated.ScrollView
+          ref={scrollViewRef}
+          onScroll={scrollHandler}
+          scrollEventThrottle={1}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: heroFull, paddingBottom: insets.bottom + 110, minHeight: screenHeight + collapseRange },
+          ]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isFetching}
+              onRefresh={refetch}
+              tintColor={colors.text}
+              colors={[colors.text]}
+              progressViewOffset={heroFull}
+            />
+          }
+        >
+          {renderTabContent(activeTab)}
+        </Animated.ScrollView>
+      </Animated.View>
+
+      {/* Animated hero overlay — always on top */}
       <HeroCollapsing
         fixture={fixture}
         scrollY={scrollY}
