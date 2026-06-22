@@ -53,10 +53,10 @@ export function useLeagueDirectory() {
   });
 
   const standingQueries = useQueries({
-    queries: DIRECTORY_LEAGUE_IDS.map((_, i) => {
+    queries: DIRECTORY_LEAGUE_IDS.map((leagueId, i) => {
       const seasonId = seasonIds[i];
       return {
-        queryKey: ['standings-dir', seasonId ?? 0],
+        queryKey: ['standings-dir', leagueId, seasonId ?? 0],
         queryFn: () => (seasonId ? fetchStandingsForDirectory(seasonId) : Promise.resolve([])),
         enabled: !!seasonId,
         staleTime: 60_000,

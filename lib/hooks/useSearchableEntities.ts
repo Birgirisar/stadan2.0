@@ -52,10 +52,10 @@ export function useSearchableEntities(): UseSearchableEntitiesResult {
 
   // Step 2: Fetch teams for each season, enabled once season IDs are known.
   const teamQueries = useQueries({
-    queries: DIRECTORY_LEAGUE_IDS.map((_, i) => {
+    queries: DIRECTORY_LEAGUE_IDS.map((leagueId, i) => {
       const seasonId = seasonIds[i];
       return {
-        queryKey: ['searchable-teams', seasonId ?? 0] as const,
+        queryKey: ['searchable-teams', leagueId, seasonId ?? 0] as const,
         queryFn: () => (seasonId ? fetchTeamsBySeason(seasonId) : Promise.resolve([])),
         enabled: !!seasonId,
         staleTime: STALE_24H,
