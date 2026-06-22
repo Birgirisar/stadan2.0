@@ -3,7 +3,17 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PanResponder, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Animated,
+  PanResponder,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LEAGUES } from '../../constants/leagues';
 import { useFixturesByDate } from '../../lib/api/fixtures';
@@ -17,6 +27,12 @@ import { DaySelector } from '../../components/fixtures/DaySelector';
 import { FilterChips, FilterType } from '../../components/fixtures/FilterChips';
 import { LeagueSection } from '../../components/fixtures/LeagueSection';
 import { MatchRow } from '../../components/fixtures/MatchRow';
+
+function addDays(date: Date, delta: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + delta);
+  return d;
+}
 
 function groupAndSort(fixtures: Fixture[]) {
   const map: Record<number, Fixture[]> = {};
@@ -37,116 +53,44 @@ function groupAndSort(fixtures: Fixture[]) {
     });
 }
 
-export default function LeikirScreen() {
-  const { colors, theme, toggleTheme } = useTheme();
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
+// ── Per-day fixtures panel ────────────────────────────────────────────────────
 
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
+interface DayContentProps {
+  date: Date;
+  today: Date;
+  followedTeamSet: Set<number>;
+  hasFollows: boolean;
+  activeFilter: FilterType;
+  onFilterChange: (f: FilterType) => void;
+  headerHeight: number;
+  bottomPadding: number;
+  isPreview: boolean;
+  horizontalScrollActive?: { current: boolean };
+}
 
-  const [selectedDate, setSelectedDate] = useState<Date>(today);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [pickerView, setPickerView] = useState({ year: today.getFullYear(), month: today.getMonth() });
-  const [headerHeight, setHeaderHeight] = useState(insets.top + 130);
+function FixtureDayContent({
+  date, today, followedTeamSet, hasFollows,
+  activeFilter, onFilterChange,
+  headerHeight, bottomPadding,
+  isPreview, horizontalScrollActive,
+}: DayContentProps) {
+  const { colors } = useTheme();
+  const { data: fixtures = [], isLoading, isFetching, error, refetch } = useFixturesByDate(date);
 
-  // Sync picker view to selected date whenever the modal opens
-  useEffect(() => {
-    if (showDatePicker) {
-      setPickerView({ year: selectedDate.getFullYear(), month: selectedDate.getMonth() });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showDatePicker]);
-
-  function shiftPickerMonth(delta: number) {
-    setPickerView(prev => {
-      let m = prev.month + delta;
-      let y = prev.year;
-      if (m < 0) { m = 11; y--; }
-      else if (m > 11) { m = 0; y++; }
-      return { year: y, month: m };
-    });
-  }
-
-  // Ref so PanResponder closure always has the latest date without being recreated
-  const shiftDay = useRef<(delta: number) => void>(() => {});
-  useEffect(() => {
-    shiftDay.current = (delta: number) => {
-      setSelectedDate((prev) => {
-        const next = new Date(prev);
-        next.setDate(next.getDate() + delta);
-        return next;
-      });
-    };
-  }, []);
-
-  // Tracks whether the date picker modal is open — read by PanResponder closure
-  const datePickerOpen = useRef(false);
-  useEffect(() => { datePickerOpen.current = showDatePicker; }, [showDatePicker]);
-
-  // Ref so PanResponder can call the latest shiftPickerMonth without being recreated
-  const shiftPickerMonthRef = useRef(shiftPickerMonth);
-  useEffect(() => { shiftPickerMonthRef.current = shiftPickerMonth; });
-
-  // True while a touch is active inside any horizontal scroll area — suppresses date-shift swipe
-  const horizontalScrollActive = useRef(false);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      // Only claim the gesture when horizontal movement clearly dominates and
-      // the user is NOT swiping on a horizontal scroll area (DaySelector, FilterChips)
-      onMoveShouldSetPanResponder: (_, { dx, dy }) =>
-        !horizontalScrollActive.current &&
-        Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 12,
-      onPanResponderRelease: (_, { dx }) => {
-        if (datePickerOpen.current) {
-          if (dx < -100) shiftPickerMonthRef.current(1);
-          else if (dx > 100) shiftPickerMonthRef.current(-1);
-        } else {
-          if (dx < -100) shiftDay.current(1);
-          else if (dx > 100) shiftDay.current(-1);
-        }
-      },
-    })
-  ).current;
-
-  const isToday = toDateString(selectedDate) === toDateString(today);
-
-  // Reset live filter when navigating away from today — live games only exist today
-  useEffect(() => {
-    if (!isToday && activeFilter === 'live') setActiveFilter('all');
-  }, [isToday]);
-
-  const { data: fixtures = [], isLoading, isFetching, error, refetch } = useFixturesByDate(selectedDate);
-
-  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
-  const handleManualRefresh = useCallback(async () => {
-    setIsManualRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setIsManualRefreshing(false);
-    }
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try { await refetch(); } finally { setIsRefreshing(false); }
   }, [refetch]);
 
-  const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
-  const gradStart = theme === 'dark' ? '#0b120f' : '#ecf5f0';
-  const gradEnd = colors.bg;
-
-  const { followedIds: followedTeamIds } = useFollowedTeams();
-
-  const followedTeamSet = useMemo(() => new Set(followedTeamIds), [followedTeamIds]);
-  const hasFollows = followedTeamIds.length > 0;
+  const isToday = toDateString(date) === toDateString(today);
 
   const allGroups = useMemo(() => groupAndSort(fixtures), [fixtures]);
-  const hasLive = fixtures.some((f) => {
-    const t = getMatchState(f.state).type;
-    return t === 'live' || t === 'halftime';
-  });
+
+  const hasLive = useMemo(
+    () => fixtures.some((f) => { const t = getMatchState(f.state).type; return t === 'live' || t === 'halftime'; }),
+    [fixtures],
+  );
 
   const followedFixtures = useMemo(() => {
     if (!hasFollows) return [];
@@ -159,10 +103,12 @@ export default function LeikirScreen() {
       .sort((a, b) => a.starting_at_timestamp - b.starting_at_timestamp);
   }, [fixtures, followedTeamSet, hasFollows]);
 
-  const followedFixtureIds = useMemo(() => new Set(followedFixtures.map((f) => f.id)), [followedFixtures]);
+  const followedFixtureIds = useMemo(
+    () => new Set(followedFixtures.map((f) => f.id)),
+    [followedFixtures],
+  );
 
   const filteredGroups = useMemo(() => {
-    // Step 1: apply chip filter
     let groups: typeof allGroups;
     if (activeFilter === 'live') {
       groups = allGroups
@@ -181,137 +127,300 @@ export default function LeikirScreen() {
     } else {
       groups = allGroups;
     }
-
-    // Dedup — remove fixtures shown in the "Þú fylgist með" section above
     if (followedFixtureIds.size > 0) {
       groups = groups
-        .map((g) => ({
-          ...g,
-          fixtures: g.fixtures.filter((f) => !followedFixtureIds.has(f.id)),
-        }))
+        .map((g) => ({ ...g, fixtures: g.fixtures.filter((f) => !followedFixtureIds.has(f.id)) }))
         .filter((g) => g.fixtures.length > 0);
     }
-
     return groups;
   }, [allGroups, activeFilter, followedFixtureIds]);
 
   const showFollowedSection = followedFixtures.length > 0;
-
   const totalCount =
     filteredGroups.reduce((sum, g) => sum + g.fixtures.length, 0) +
     (showFollowedSection ? followedFixtures.length : 0);
-
-  const sectionLabel = getSectionHeading(selectedDate);
+  const sectionLabel = getSectionHeading(date);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }} {...panResponder.panHandlers}>
-      {/* Scrollable content — starts padded by headerHeight */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: insets.bottom + 88 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: bottomPadding }}
+      showsVerticalScrollIndicator={false}
+      scrollEnabled={!isPreview}
+      refreshControl={
+        !isPreview ? (
           <RefreshControl
-            refreshing={isManualRefreshing}
-            onRefresh={handleManualRefresh}
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
             tintColor={colors.text}
             colors={[colors.text]}
             progressViewOffset={headerHeight}
           />
-        }
+        ) : undefined
+      }
+    >
+      <View
+        onTouchStart={horizontalScrollActive ? () => { horizontalScrollActive.current = true; } : undefined}
+        onTouchEnd={horizontalScrollActive ? () => { horizontalScrollActive.current = false; } : undefined}
+        onTouchCancel={horizontalScrollActive ? () => { horizontalScrollActive.current = false; } : undefined}
       >
-        <View
-          onTouchStart={() => { horizontalScrollActive.current = true; }}
-          onTouchEnd={() => { horizontalScrollActive.current = false; }}
-          onTouchCancel={() => { horizontalScrollActive.current = false; }}
-        >
-          <FilterChips active={activeFilter} onSelect={setActiveFilter} hasLive={hasLive} isToday={isToday} />
+        <FilterChips active={activeFilter} onSelect={onFilterChange} hasLive={hasLive} isToday={isToday} />
+      </View>
+
+      {!isLoading && !error && (
+        <View style={[styles.sectionRow, { paddingHorizontal: 22 }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{sectionLabel}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {isFetching && !isRefreshing && (
+              <Text style={[styles.countText, { color: colors.textMuted }]}>Uppfærir…</Text>
+            )}
+            <View style={[styles.countBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.countText, { color: colors.textMuted }]}>{totalCount} leikir</Text>
+            </View>
+          </View>
         </View>
+      )}
 
-        {!isLoading && !error && (
-          <View style={[styles.sectionRow, { paddingHorizontal: 22 }]}>
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-              {sectionLabel}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              {isFetching && !isManualRefreshing && (
-                <Text style={[styles.countText, { color: colors.textMuted }]}>Uppfærir…</Text>
-              )}
-              <View
-                style={[
-                  styles.countBadge,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-              >
-                <Text style={[styles.countText, { color: colors.textMuted }]}>
-                  {totalCount} leikir
-                </Text>
-              </View>
-            </View>
+      {isLoading && (
+        <View style={styles.center}>
+          <Text style={[styles.msgText, { color: colors.textMuted }]}>Sæki leiki…</Text>
+        </View>
+      )}
+
+      {!!error && !isLoading && (
+        <View style={styles.center}>
+          <Text style={[styles.msgText, { color: colors.textMuted }]}>Villa við að sækja leiki</Text>
+          <TouchableOpacity
+            onPress={() => refetch()}
+            style={[styles.retryBtn, { borderColor: colors.border }]}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.retryText, { color: colors.accent }]}>Reyna aftur</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {!isLoading && !error && filteredGroups.length === 0 && !showFollowedSection && (
+        <View style={styles.center}>
+          <Text style={[styles.msgText, { color: colors.textMuted }]}>
+            {activeFilter === 'live' ? 'Engir leikir í beinni' : 'Engir leikir í dag'}
+          </Text>
+        </View>
+      )}
+
+      {showFollowedSection && (
+        <>
+          <View style={styles.followedHeading}>
+            <Text style={[styles.followedHeadingText, { color: colors.textSecondary }]}>Þú fylgist með</Text>
           </View>
-        )}
-
-        {isLoading && (
-          <View style={styles.center}>
-            <Text style={[styles.msgText, { color: colors.textMuted }]}>Sæki leiki…</Text>
+          <View style={[styles.followedCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {followedFixtures.map((f, i) => (
+              <MatchRow key={f.id} fixture={f} isLast={i === followedFixtures.length - 1} />
+            ))}
           </View>
-        )}
+        </>
+      )}
 
-        {!!error && !isLoading && (
-          <View style={styles.center}>
-            <Text style={[styles.msgText, { color: colors.textMuted }]}>
-              Villa við að sækja leiki
-            </Text>
-            <TouchableOpacity
-              onPress={() => refetch()}
-              style={[styles.retryBtn, { borderColor: colors.border }]}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.retryText, { color: colors.accent }]}>Reyna aftur</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      {filteredGroups.map((g) => (
+        <LeagueSection
+          key={`${g.leagueId}-${toDateString(date)}`}
+          leagueId={g.leagueId}
+          fixtures={g.fixtures}
+          roundName={g.roundName}
+        />
+      ))}
+    </ScrollView>
+  );
+}
 
-        {!isLoading && !error && filteredGroups.length === 0 && !showFollowedSection && (
-          <View style={styles.center}>
-            <Text style={[styles.msgText, { color: colors.textMuted }]}>
-              {activeFilter === 'live' ? 'Engir leikir í beinni' : 'Engir leikir í dag'}
-            </Text>
-          </View>
-        )}
+// ── Main screen ───────────────────────────────────────────────────────────────
 
-        {/* "Þú fylgist með" section — followed fixtures above league groups */}
-        {showFollowedSection && (
-          <>
-            <View style={styles.followedHeading}>
-              <Text style={[styles.followedHeadingText, { color: colors.textSecondary }]}>
-                Þú fylgist með
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.followedCard,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              {followedFixtures.map((f, i) => (
-                <MatchRow key={f.id} fixture={f} isLast={i === followedFixtures.length - 1} />
-              ))}
-            </View>
-          </>
-        )}
+export default function LeikirScreen() {
+  const { colors, theme, toggleTheme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
 
-        {filteredGroups.map((g) => (
-          <LeagueSection
-            key={`${g.leagueId}-${toDateString(selectedDate)}`}
-            leagueId={g.leagueId}
-            fixtures={g.fixtures}
-            roundName={g.roundName}
-          />
-        ))}
-      </ScrollView>
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
 
-      {/* Absolutely-positioned frosted header */}
+  const [selectedDate, setSelectedDate] = useState<Date>(today);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerView, setPickerView] = useState({ year: today.getFullYear(), month: today.getMonth() });
+  const [headerHeight, setHeaderHeight] = useState(insets.top + 130);
+
+  useEffect(() => {
+    if (showDatePicker) {
+      setPickerView({ year: selectedDate.getFullYear(), month: selectedDate.getMonth() });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDatePicker]);
+
+  function shiftPickerMonth(delta: number) {
+    setPickerView(prev => {
+      let m = prev.month + delta;
+      let y = prev.year;
+      if (m < 0) { m = 11; y--; }
+      else if (m > 11) { m = 0; y++; }
+      return { year: y, month: m };
+    });
+  }
+
+  const shiftPickerMonthRef = useRef(shiftPickerMonth);
+  useEffect(() => { shiftPickerMonthRef.current = shiftPickerMonth; });
+
+  const datePickerOpen = useRef(false);
+  useEffect(() => { datePickerOpen.current = showDatePicker; }, [showDatePicker]);
+
+  const selectedIsToday = toDateString(selectedDate) === toDateString(today);
+  useEffect(() => {
+    if (!selectedIsToday && activeFilter === 'live') setActiveFilter('all');
+  }, [selectedIsToday, activeFilter]);
+
+  const { followedIds: followedTeamIds } = useFollowedTeams();
+  const followedTeamSet = useMemo(() => new Set(followedTeamIds), [followedTeamIds]);
+  const hasFollows = followedTeamIds.length > 0;
+
+  // ── Panel animation ─────────────────────────────────────────────────────────
+  const currentPanelX = useRef(new Animated.Value(0)).current;
+  const prevPanelX = useRef(new Animated.Value(-screenWidth)).current;
+  const nextPanelX = useRef(new Animated.Value(screenWidth)).current;
+  const currentPanelOpacity = useRef(new Animated.Value(1)).current;
+  const screenWidthRef = useRef(screenWidth);
+  screenWidthRef.current = screenWidth;
+
+  const selectedDateRef = useRef(selectedDate);
+  selectedDateRef.current = selectedDate;
+
+  const prevDate = addDays(selectedDate, -1);
+  const nextDate = addDays(selectedDate, 1);
+
+  const [frozenPrevDate, setFrozenPrevDate] = useState<Date | null>(null);
+  const [frozenNextDate, setFrozenNextDate] = useState<Date | null>(null);
+  const isCommittingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isCommittingRef.current) return;
+    isCommittingRef.current = false;
+    const sw = screenWidthRef.current;
+    currentPanelX.setValue(0);
+    currentPanelOpacity.setValue(1);
+    prevPanelX.setValue(-sw);
+    nextPanelX.setValue(sw);
+    requestAnimationFrame(() => {
+      setFrozenPrevDate(null);
+      setFrozenNextDate(null);
+    });
+  }, [selectedDate]);
+
+  const springBack = () => {
+    const sw = screenWidthRef.current;
+    Animated.parallel([
+      Animated.spring(currentPanelX, { toValue: 0, tension: 120, friction: 10, useNativeDriver: false }),
+      Animated.spring(prevPanelX, { toValue: -sw, tension: 120, friction: 10, useNativeDriver: false }),
+      Animated.spring(nextPanelX, { toValue: sw, tension: 120, friction: 10, useNativeDriver: false }),
+    ]).start();
+  };
+
+  const horizontalScrollActive = useRef(false);
+
+  const panResponder = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+      !horizontalScrollActive.current &&
+      Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 12,
+    onPanResponderMove: (_, { dx }) => {
+      if (datePickerOpen.current) return;
+      currentPanelX.setValue(dx);
+      prevPanelX.setValue(-screenWidthRef.current + dx);
+      nextPanelX.setValue(screenWidthRef.current + dx);
+    },
+    onPanResponderRelease: (_, { dx }) => {
+      if (datePickerOpen.current) {
+        if (dx < -100) shiftPickerMonthRef.current(1);
+        else if (dx > 100) shiftPickerMonthRef.current(-1);
+        return;
+      }
+      if (Math.abs(dx) > 100) {
+        const delta = dx < 0 ? 1 : -1;
+        const sw = screenWidthRef.current;
+        if (delta === 1) {
+          prevPanelX.setValue(-sw);
+          Animated.parallel([
+            Animated.timing(currentPanelX, { toValue: -sw, duration: 220, useNativeDriver: false }),
+            Animated.timing(nextPanelX, { toValue: 0, duration: 220, useNativeDriver: false }),
+          ]).start(() => {
+            setFrozenNextDate(addDays(selectedDateRef.current, 1));
+            currentPanelOpacity.setValue(0);
+            isCommittingRef.current = true;
+            setSelectedDate(addDays(selectedDateRef.current, 1));
+          });
+        } else {
+          nextPanelX.setValue(sw);
+          Animated.parallel([
+            Animated.timing(currentPanelX, { toValue: sw, duration: 220, useNativeDriver: false }),
+            Animated.timing(prevPanelX, { toValue: 0, duration: 220, useNativeDriver: false }),
+          ]).start(() => {
+            setFrozenPrevDate(addDays(selectedDateRef.current, -1));
+            currentPanelOpacity.setValue(0);
+            isCommittingRef.current = true;
+            setSelectedDate(addDays(selectedDateRef.current, -1));
+          });
+        }
+      } else {
+        springBack();
+      }
+    },
+    onPanResponderTerminate: () => springBack(),
+  })).current;
+
+  const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
+  const gradStart = theme === 'dark' ? '#0b120f' : '#ecf5f0';
+  const gradEnd = colors.bg;
+
+  const sharedProps = {
+    today,
+    followedTeamSet,
+    hasFollows,
+    activeFilter,
+    onFilterChange: setActiveFilter,
+    headerHeight,
+    bottomPadding: insets.bottom + 88,
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }} {...panResponder.panHandlers}>
+      {/* Previous day panel */}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { transform: [{ translateX: prevPanelX }] }]}
+        pointerEvents="none"
+      >
+        <FixtureDayContent {...sharedProps} date={frozenPrevDate ?? prevDate} isPreview />
+      </Animated.View>
+
+      {/* Next day panel */}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { transform: [{ translateX: nextPanelX }] }]}
+        pointerEvents="none"
+      >
+        <FixtureDayContent {...sharedProps} date={frozenNextDate ?? nextDate} isPreview />
+      </Animated.View>
+
+      {/* Current day panel — key resets scroll + state on date change */}
+      <Animated.View style={{ flex: 1, transform: [{ translateX: currentPanelX }], opacity: currentPanelOpacity }}>
+        <FixtureDayContent
+          key={toDateString(selectedDate)}
+          {...sharedProps}
+          date={selectedDate}
+          isPreview={false}
+          horizontalScrollActive={horizontalScrollActive}
+        />
+      </Animated.View>
+
+      {/* Fixed frosted header */}
       <View
         style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}
         onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
@@ -320,11 +429,7 @@ export default function LeikirScreen() {
         <BlurView
           intensity={80}
           tint={tint}
-          style={{
-            paddingTop: insets.top + 6,
-            paddingHorizontal: 18,
-            paddingBottom: 12,
-          }}
+          style={{ paddingTop: insets.top + 6, paddingHorizontal: 18, paddingBottom: 12 }}
         >
           <LinearGradient
             colors={[gradStart, gradEnd]}
@@ -340,43 +445,21 @@ export default function LeikirScreen() {
             <View style={styles.headerActions}>
               <TouchableOpacity
                 onPress={() => setShowDatePicker(true)}
-                style={[
-                  styles.iconBtn,
-                  {
-                    backgroundColor: `rgba(${colors.bgRgb}, 0.6)`,
-                    borderColor: colors.border,
-                  },
-                ]}
+                style={[styles.iconBtn, { backgroundColor: `rgba(${colors.bgRgb}, 0.6)`, borderColor: colors.border }]}
                 activeOpacity={0.7}
               >
                 <Ionicons name="calendar-outline" size={18} color={colors.text} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={toggleTheme}
-                style={[
-                  styles.iconBtn,
-                  {
-                    backgroundColor: `rgba(${colors.bgRgb}, 0.6)`,
-                    borderColor: colors.border,
-                  },
-                ]}
+                style={[styles.iconBtn, { backgroundColor: `rgba(${colors.bgRgb}, 0.6)`, borderColor: colors.border }]}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={theme === 'dark' ? 'sunny-outline' : 'moon-outline'}
-                  size={18}
-                  color={colors.text}
-                />
+                <Ionicons name={theme === 'dark' ? 'sunny-outline' : 'moon-outline'} size={18} color={colors.text} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => router.push('/stillingar' as any)}
-                style={[
-                  styles.iconBtn,
-                  {
-                    backgroundColor: `rgba(${colors.bgRgb}, 0.6)`,
-                    borderColor: colors.border,
-                  },
-                ]}
+                style={[styles.iconBtn, { backgroundColor: `rgba(${colors.bgRgb}, 0.6)`, borderColor: colors.border }]}
                 activeOpacity={0.7}
               >
                 <Ionicons name="settings-outline" size={18} color={colors.text} />
@@ -389,11 +472,7 @@ export default function LeikirScreen() {
             onTouchEnd={() => { horizontalScrollActive.current = false; }}
             onTouchCancel={() => { horizontalScrollActive.current = false; }}
           >
-            <DaySelector
-              selectedDate={selectedDate}
-              today={today}
-              onSelect={setSelectedDate}
-            />
+            <DaySelector selectedDate={selectedDate} today={today} onSelect={setSelectedDate} />
           </View>
         </BlurView>
 
@@ -403,6 +482,7 @@ export default function LeikirScreen() {
           pointerEvents="none"
         />
       </View>
+
       <DatePickerModal
         visible={showDatePicker}
         selectedDate={selectedDate}
@@ -501,40 +581,5 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
-  },
-  favEmptyCard: {
-    marginHorizontal: 14,
-    marginTop: 8,
-    marginBottom: 8,
-    padding: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  favEmptyIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  favEmptyText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  favEmptyTitle: {
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 13,
-    marginBottom: 2,
-  },
-  favEmptySub: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 11.5,
-    lineHeight: 16,
   },
 });

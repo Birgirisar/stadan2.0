@@ -11,7 +11,6 @@ export async function smGet<T>(path: string, params: Record<string, string> = {}
     api_token: process.env.EXPO_PUBLIC_SPORTMONKS_KEY,
     ...params,
   };
-  console.log('[smGet]', path, logParams);
   try {
     const res = await client.get<SportmonksResponse<T>>(path, {
       params: {
@@ -19,7 +18,6 @@ export async function smGet<T>(path: string, params: Record<string, string> = {}
         ...params,
       },
     });
-    console.log('[smGet] OK', path, 'status:', res.status, 'hasData:', res.data?.data != null);
     return res.data.data;
   } catch (err: any) {
     console.error('[smGet] ERROR', path);

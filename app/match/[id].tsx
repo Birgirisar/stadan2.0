@@ -104,7 +104,6 @@ export default function MatchDetailScreen() {
   collapseRangeRef.current = collapseRange;
 
   const { data: fixture, isLoading, isFetching, error, refetch } = useMatchDetail(id);
-  console.log(fixture?.id);
 
   const home = fixture?.participants?.find((p) => p.meta.location === 'home');
   const away = fixture?.participants?.find((p) => p.meta.location === 'away');
