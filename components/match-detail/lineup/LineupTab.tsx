@@ -86,8 +86,6 @@ export function LineupTab({ fixture }: Props) {
         awayTeamName={away.name}
         homeTeamShortCode={home.short_code ?? ''}
         awayTeamShortCode={away.short_code ?? ''}
-        homeColor={homeColor}
-        awayColor={awayColor}
       />
 
       <SubstitutesSection

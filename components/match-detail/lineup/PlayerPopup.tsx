@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import type { LineupEntry } from '../../../lib/api/types';
 import {
-  getDetailValue,
+  // getDetailValue,  // uncomment when stats data becomes available
   getRatingColor,
   isValidPlayerImage,
 } from '../../../lib/utils/lineup';
@@ -72,8 +72,8 @@ export function PlayerPopup({ entry, teamName, teamColor, visible, onClose }: Pr
   const player = entry.player;
   const imageUri = player?.image_path;
   const showImage = isValidPlayerImage(imageUri) && !imgError;
-  const details = entry.details ?? [];
-  const hasStats = details.length > 0;
+  // const details = entry.details ?? [];
+  // const hasStats = details.length > 0;
   const rating = entry.rating;
   const ratingColor = getRatingColor(rating, colors);
 
@@ -90,14 +90,14 @@ export function PlayerPopup({ entry, teamName, teamColor, visible, onClose }: Pr
     .filter(Boolean)
     .join(' · ');
 
-  const stats = [
-    { label: 'Mörk', value: getDetailValue(details, 'goals') },
-    { label: 'Stoðsendingar', value: getDetailValue(details, 'assists') },
-    { label: 'Mínútur', value: getDetailValue(details, 'minutes_played') },
-    { label: 'Skot', value: getDetailValue(details, 'shots_total') },
-    { label: 'Sending %', value: getDetailValue(details, 'passes_accurate_percentage') },
-    { label: 'Spjöld', value: getDetailValue(details, 'yellowcards') },
-  ];
+  // const stats = [
+  //   { label: 'Mörk', value: getDetailValue(details, 'goals') },
+  //   { label: 'Stoðsendingar', value: getDetailValue(details, 'assists') },
+  //   { label: 'Mínútur', value: getDetailValue(details, 'minutes_played') },
+  //   { label: 'Skot', value: getDetailValue(details, 'shots_total') },
+  //   { label: 'Sending %', value: getDetailValue(details, 'passes_accurate_percentage') },
+  //   { label: 'Spjöld', value: getDetailValue(details, 'yellowcards') },
+  // ];
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
@@ -157,7 +157,7 @@ export function PlayerPopup({ entry, teamName, teamColor, visible, onClose }: Pr
           )}
         </View>
 
-        {/* Stats grid */}
+        {/* Stats grid — commented out until data is available
         {hasStats && (
           <View style={styles.statsGrid}>
             {stats.map(({ label, value }) => (
@@ -175,6 +175,7 @@ export function PlayerPopup({ entry, teamName, teamColor, visible, onClose }: Pr
             ))}
           </View>
         )}
+        */}
           </Animated.View>
         </Pressable>
       </Animated.View>
