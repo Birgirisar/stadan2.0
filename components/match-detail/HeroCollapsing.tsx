@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Animated, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { DetailedFixture } from '../../lib/api/types';
 import { useTheme } from '../../lib/theme/useTheme';
@@ -352,6 +352,7 @@ export function HeroCollapsing({
           { position: 'absolute', top: btnTop, right: 14, backgroundColor: colors.surface + '80', borderColor: colors.border },
         ]}
         hitSlop={8}
+        onPress={() => Alert.alert('Þessi aðgerð er í vinnslu!', 'Hægt verður að deila leikjum fljótlegja...')}
       >
         <Ionicons name="share-outline" size={22} color={colors.text} />
       </Pressable>

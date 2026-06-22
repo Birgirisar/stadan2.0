@@ -5,7 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import * as StoreReview from 'expo-store-review';
+// import * as StoreReview from 'expo-store-review';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -14,7 +14,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Share,
+  // Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -240,28 +240,28 @@ export default function StillingarScreen() {
     toastTimer.current = setTimeout(() => setToastVisible(false), 2500);
   };
 
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message:
-          'Staðan — íslenskt fótboltaapp. Niðurstöður, töflur og lýsingar á íslensku.',
-        url: 'https://stadan.app',
-      });
-    } catch {}
-  };
+  // const handleShare = async () => {
+  //   try {
+  //     await Share.share({
+  //       message:
+  //         'Staðan — íslenskt fótboltaapp. Niðurstöður, töflur og lýsingar á íslensku.',
+  //       url: 'https://stadan.app',
+  //     });
+  //   } catch {}
+  // };
 
-  const handleRate = async () => {
-    try {
-      const isAvailable = await StoreReview.isAvailableAsync();
-      if (isAvailable) {
-        await StoreReview.requestReview();
-      } else {
-        showToast('Kemur þegar appið birtist í App Store');
-      }
-    } catch {
-      showToast('Kemur þegar appið birtist í App Store');
-    }
-  };
+  // const handleRate = async () => {
+  //   try {
+  //     const isAvailable = await StoreReview.isAvailableAsync();
+  //     if (isAvailable) {
+  //       await StoreReview.requestReview();
+  //     } else {
+  //       showToast('Kemur þegar appið birtist í App Store');
+  //     }
+  //   } catch {
+  //     showToast('Kemur þegar appið birtist í App Store');
+  //   }
+  // };
 
   const handleContact = async () => {
     // TODO: replace CONTACT_EMAIL with the real address before shipping
@@ -354,7 +354,7 @@ export default function StillingarScreen() {
         {/* DEILA */}
         <SectionHeader label="DEILA" colors={colors} />
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <TouchableOpacity onPress={handleShare} activeOpacity={0.7}>
+          {/* <TouchableOpacity onPress={handleShare} activeOpacity={0.7}>
             <View style={styles.row}>
               <View style={styles.rowLeft}>
                 <Ionicons name="share-social-outline" size={18} color={colors.textSecondary} />
@@ -364,9 +364,9 @@ export default function StillingarScreen() {
                 <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
               </View>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
-          <TouchableOpacity onPress={handleRate} activeOpacity={0.7}>
+          {/* <TouchableOpacity onPress={handleRate} activeOpacity={0.7}>
             <View style={[styles.row, { borderTopWidth: 1, borderTopColor: colors.border }]}>
               <View style={styles.rowLeft}>
                 <Ionicons name="star-outline" size={18} color={colors.textSecondary} />
@@ -378,10 +378,10 @@ export default function StillingarScreen() {
                 <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
               </View>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity onPress={handleContact} activeOpacity={0.7}>
-            <View style={[styles.row, { borderTopWidth: 1, borderTopColor: colors.border }]}>
+            <View style={styles.row}>
               <View style={styles.rowLeft}>
                 <Ionicons name="mail-outline" size={18} color={colors.textSecondary} />
                 <Text style={[styles.rowLabel, { color: colors.text }]}>Hafa samband</Text>
