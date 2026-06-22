@@ -15,17 +15,6 @@ async function fetchFixturesByDate(dateStr: string): Promise<Fixture[]> {
   });
   const fixtures = Array.isArray(result) ? result : [];
 
-  // Debug: log state fields so we can verify live detection works correctly
-  for (const f of fixtures) {
-    if (f.state) {
-      console.log(
-        `[fixtures] id=${f.id} state.state="${f.state.state}" is_live=${f.state.is_live} ` +
-        `is_pending=${f.state.is_pending} short_name="${f.state.short_name}" ` +
-        `periods=${f.periods?.length ?? 0}`
-      );
-    }
-  }
-
   return fixtures;
 }
 
