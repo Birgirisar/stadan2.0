@@ -11,8 +11,6 @@ interface Props {
   awayTeamName: string;
   homeTeamShortCode: string;
   awayTeamShortCode: string;
-  homeColor: string;
-  awayColor: string;
 }
 
 const AVATAR_SIZE = 36;
@@ -24,8 +22,6 @@ export function ManagersSection({
   awayCoach,
   homeTeamName: _homeTeamName,
   awayTeamName: _awayTeamName,
-  homeColor,
-  awayColor,
 }: Props) {
   const { colors } = useTheme();
 
@@ -43,14 +39,12 @@ export function ManagersSection({
         <CoachCol
           coach={homeCoach}
           coachName={coachName(homeCoach)}
-          teamColor={homeColor}
           colors={colors}
         />
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <CoachCol
           coach={awayCoach}
           coachName={coachName(awayCoach)}
-          teamColor={awayColor}
           colors={colors}
         />
       </View>
@@ -61,12 +55,10 @@ export function ManagersSection({
 const CoachCol = memo(function CoachCol({
   coach,
   coachName,
-  teamColor,
   colors,
 }: {
   coach: Coach | null;
   coachName: string;
-  teamColor: string;
   colors: ReturnType<typeof import('../../../lib/theme/useTheme').useTheme>['colors'];
 }) {
   const [imgError, setImgError] = useState(false);
@@ -96,7 +88,6 @@ const CoachCol = memo(function CoachCol({
 
       <View style={styles.meta}>
         <View style={styles.labelRow}>
-          <View style={[styles.labelDot, { backgroundColor: teamColor }]} />
           <Text style={[styles.label, { color: colors.textMuted }]}>Þjálfari</Text>
         </View>
         <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
@@ -175,12 +166,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     marginBottom: 1,
-  },
-  labelDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    flexShrink: 0,
   },
   label: {
     fontFamily: 'Manrope_700Bold',
