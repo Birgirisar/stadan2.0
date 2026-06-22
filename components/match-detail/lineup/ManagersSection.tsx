@@ -11,6 +11,8 @@ interface Props {
   awayTeamName: string;
   homeTeamShortCode: string;
   awayTeamShortCode: string;
+  homeImagePath: string;
+  awayImagePath: string;
 }
 
 const AVATAR_SIZE = 36;
@@ -20,8 +22,10 @@ const INNER = AVATAR_SIZE - 2 * RING_W; // 34
 export function ManagersSection({
   homeCoach,
   awayCoach,
-  homeTeamName: _homeTeamName,
-  awayTeamName: _awayTeamName,
+  homeTeamName,
+  awayTeamName,
+  homeImagePath,
+  awayImagePath,
 }: Props) {
   const { colors } = useTheme();
 
@@ -35,6 +39,27 @@ export function ManagersSection({
 
   return (
     <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      {/* Team header row */}
+      <View style={[styles.teamHeaderRow, { borderColor: colors.border }]}>
+        <View style={styles.teamHeaderCell}>
+          {!!homeImagePath && (
+            <Image source={{ uri: homeImagePath }} style={styles.teamCrest} resizeMode="contain" />
+          )}
+          <Text style={[styles.teamName, { color: colors.textMuted }]} numberOfLines={1}>
+            {homeTeamName}
+          </Text>
+        </View>
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <View style={styles.teamHeaderCell}>
+          {!!awayImagePath && (
+            <Image source={{ uri: awayImagePath }} style={styles.teamCrest} resizeMode="contain" />
+          )}
+          <Text style={[styles.teamName, { color: colors.textMuted }]} numberOfLines={1}>
+            {awayTeamName}
+          </Text>
+        </View>
+      </View>
+
       <View style={styles.grid}>
         <CoachCol
           coach={homeCoach}
@@ -105,6 +130,31 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
+  },
+  teamHeaderRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+  },
+  teamHeaderCell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 0,
+  },
+  teamCrest: {
+    width: 16,
+    height: 16,
+    flexShrink: 0,
+  },
+  teamName: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    flexShrink: 1,
   },
   grid: {
     flexDirection: 'row',
