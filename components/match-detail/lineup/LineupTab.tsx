@@ -86,13 +86,13 @@ export function LineupTab({ fixture }: Props) {
         awayTeamName={away.name}
         homeTeamShortCode={home.short_code ?? ''}
         awayTeamShortCode={away.short_code ?? ''}
+        homeImagePath={home.image_path ?? ''}
+        awayImagePath={away.image_path ?? ''}
       />
 
       <SubstitutesSection
         homeSubs={result.home.subs}
         awaySubs={result.away.subs}
-        homeParticipant={home}
-        awayParticipant={away}
         events={events}
         isPredicted={result.state === 'predicted'}
         onPlayerPress={handlePlayerPress}

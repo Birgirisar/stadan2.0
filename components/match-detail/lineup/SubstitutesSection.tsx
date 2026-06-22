@@ -2,15 +2,13 @@ import React, { memo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import type { LineupEntry, FixtureEvent, Participant } from '../../../lib/api/types';
+import type { LineupEntry, FixtureEvent } from '../../../lib/api/types';
 import { getSubOnInfo, getPlayerStatusIcons, isValidPlayerImage, type StatusIconType } from '../../../lib/utils/lineup';
 import { useTheme } from '../../../lib/theme/useTheme';
 
 interface Props {
   homeSubs: LineupEntry[];
   awaySubs: LineupEntry[];
-  homeParticipant: Participant | undefined;
-  awayParticipant: Participant | undefined;
   events: FixtureEvent[];
   isPredicted: boolean;
   onPlayerPress: (entry: LineupEntry) => void;
@@ -23,8 +21,6 @@ const INNER = AVATAR - 2 * RING_W;
 export function SubstitutesSection({
   homeSubs,
   awaySubs,
-  homeParticipant,
-  awayParticipant,
   events,
   isPredicted,
   onPlayerPress,
@@ -39,27 +35,6 @@ export function SubstitutesSection({
     <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={[styles.header, { borderColor: colors.border }]}>
         <Text style={[styles.headerText, { color: colors.textSecondary }]}>Varamenn</Text>
-      </View>
-
-      {/* Team name headers */}
-      <View style={[styles.teamHeaderRow, { borderColor: colors.border }]}>
-        <View style={styles.teamHeaderCell}>
-          {!!homeParticipant?.image_path && (
-            <Image source={{ uri: homeParticipant.image_path }} style={styles.teamCrest} resizeMode="contain" />
-          )}
-          <Text style={[styles.teamName, { color: colors.textMuted }]} numberOfLines={1}>
-            {homeParticipant?.name ?? ''}
-          </Text>
-        </View>
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <View style={styles.teamHeaderCell}>
-          {!!awayParticipant?.image_path && (
-            <Image source={{ uri: awayParticipant.image_path }} style={styles.teamCrest} resizeMode="contain" />
-          )}
-          <Text style={[styles.teamName, { color: colors.textMuted }]} numberOfLines={1}>
-            {awayParticipant?.name ?? ''}
-          </Text>
-        </View>
       </View>
 
       {/* One row per player position */}
@@ -228,31 +203,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-  },
-  teamHeaderRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-  },
-  teamHeaderCell: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minWidth: 0,
-  },
-  teamCrest: {
-    width: 16,
-    height: 16,
-    flexShrink: 0,
-  },
-  teamName: {
-    fontFamily: 'Manrope_700Bold',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    flexShrink: 1,
   },
   divider: {
     width: 1,
