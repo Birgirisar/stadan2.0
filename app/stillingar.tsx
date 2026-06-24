@@ -26,8 +26,7 @@ import { useTheme } from '../lib/theme/useTheme';
 import { useThemePreference } from '../lib/hooks/useThemePreference';
 import type { ThemeColors } from '../lib/theme/colors';
 
-// TODO: replace with real contact email before shipping
-const CONTACT_EMAIL = 'stadan@example.com';
+const CONTACT_EMAIL = 'stadanapp@gmail.com';
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 
