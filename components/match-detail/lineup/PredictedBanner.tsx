@@ -18,7 +18,7 @@ export function PredictedBanner() {
       <Ionicons name="time-outline" size={14} color={colors.gold} />
       <Text style={[styles.text, { color: colors.textSecondary }]}>
         <Text style={{ color: colors.gold, fontFamily: 'Manrope_800ExtraBold' }}>Spáð lið · </Text>
-        Byggt á síðustu leikjum. Staðfest lið birtast um klukkutíma fyrir leik.
+        Byggt á síðustu leikjum. Byrjunarlið birtast um klukkutíma fyrir leik.
       </Text>
     </View>
   );

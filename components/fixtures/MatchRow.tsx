@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#d63031',
   },
   tinyCardOverlap: {
-    marginLeft: -2,
+    marginLeft: 2,
   },
   cardSpacer: {
     height: 9,

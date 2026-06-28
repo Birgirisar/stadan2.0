@@ -22,7 +22,7 @@ function RedCardStack({ count, size = 'large' }: { count: number; size?: 'large'
   const w = size === 'large' ? 8 : 6;
   const h = size === 'large' ? 11 : 9;
   const r = size === 'large' ? 1.5 : 1;
-  const overlap = size === 'large' ? -3 : -2;
+  const overlap = size === 'large' ? 2 : 2;
   return (
     <View style={{ flexDirection: 'row' }}>
       {Array.from({ length: count }, (_, i) => (
