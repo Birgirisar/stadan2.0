@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AppState,
   Animated,
   PanResponder,
   RefreshControl,
@@ -241,10 +242,18 @@ export default function LeikirScreen() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
 
-  const today = useMemo(() => {
+  const makeToday = () => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
+  };
+  const [today, setToday] = useState<Date>(makeToday);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setToday(makeToday());
+    });
+    return () => sub.remove();
   }, []);
 
   const [selectedDate, setSelectedDate] = useState<Date>(today);
