@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { FixtureEvent } from '../../lib/api/types';
 import { EVENT_TYPE, formatMinute, getEventLabel } from '../../lib/utils/events';
+import { formatPlayerName, getEventPlayerName, getEventRelatedPlayerName } from '../../lib/utils/playerName';
 import { useTheme } from '../../lib/theme/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -22,6 +23,18 @@ function CardIcon({ color, style }: { color: string; style?: any }) {
   );
 }
 
+function MissedPenaltyIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.goalPostWrap}>
+      <View style={[styles.goalPost, { borderColor: color }]} />
+      <View style={styles.xMark}>
+        <View style={[styles.xLine, { backgroundColor: color, transform: [{ rotate: '45deg' }] }]} />
+        <View style={[styles.xLine, { backgroundColor: color, transform: [{ rotate: '-45deg' }] }]} />
+      </View>
+    </View>
+  );
+}
+
 function SubIcon({ color, direction }: { color: string; direction: 'in' | 'out' }) {
   return (
     <View style={styles.subIconWrap}>
@@ -33,10 +46,10 @@ function SubIcon({ color, direction }: { color: string; direction: 'in' | 'out' 
 function EventIcon({ iconType, colors }: { iconType: string; colors: ReturnType<typeof import('../../lib/theme/useTheme').useTheme>['colors'] }) {
   switch (iconType) {
     case 'goal':
-    case 'missed-pen':
-      return <GoalIcon color={colors.text} />;
     case 'pen-goal':
-      return <GoalIcon color={colors.accent} />;
+      return <GoalIcon color={colors.text} />;
+    case 'missed-pen':
+      return <MissedPenaltyIcon color={colors.loss} />;
     case 'own-goal':
       return <GoalIcon color={colors.loss} />;
     case 'yellow':
@@ -60,13 +73,11 @@ function EventIcon({ iconType, colors }: { iconType: string; colors: ReturnType<
 export function EventRow({ event, side }: Props) {
   const { colors } = useTheme();
   const { line1Sub, iconType } = getEventLabel(event);
-  const playerName = event.player_name || event.player?.name || '<TBD>';
+  const playerName = getEventPlayerName(event) ?? '<TBD>';
   const minuteStr = formatMinute(event);
   const isHome = side === 'home';
   const isSub = event.type_id === EVENT_TYPE.SUBSTITUTION;
-  const playerOffName = isSub
-    ? (event.related_player_name || event.related_player?.name || null)
-    : null;
+  const playerOffName = isSub ? getEventRelatedPlayerName(event) : null;
 
   const content = (
     <View style={[styles.content, isHome ? styles.contentHome : styles.contentAway]}>
@@ -77,7 +88,7 @@ export function EventRow({ event, side }: Props) {
           style={[styles.playerName, { color: colors.text }]}
           numberOfLines={1}
         >
-          {formatName(playerName, "full")}
+          {formatPlayerName(playerName, "full")}
         </Text>
       </View>
       {/* Sub: player going off */}
@@ -88,7 +99,7 @@ export function EventRow({ event, side }: Props) {
             style={[styles.playerName, { color: colors.textMuted }]}
             numberOfLines={1}
           >
-            {formatName(playerOffName, "full")}
+            {formatPlayerName(playerOffName, "full")}
           </Text>
         </View>
       )}
@@ -117,27 +128,6 @@ export function EventRow({ event, side }: Props) {
       {isHome ? <View style={styles.spacer} /> : content}
     </View>
   );
-}
-
-function formatName(name: string, mode: "full" | "compact" | "scoreboard") {
-  const parts = name.trim().split(" ");
-  if (parts.length <= 1) return name;
-
-  const last = parts[parts.length - 1];
-
-  switch (mode) {
-    case "full":
-      return name;
-
-    case "compact":
-      return `${parts[0][0]}. ${last}`;
-
-    case "scoreboard":
-      return last;
-
-    default:
-      return name;
-  }
 }
 
 const styles = StyleSheet.create({
@@ -185,6 +175,29 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 2,
     flexShrink: 0,
+  },
+  goalPostWrap: { width: 17, height: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  goalPost: {
+    width: 16,
+    height: 10,
+    borderWidth: 2,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+  },
+  xMark: {
+    position: 'absolute',
+    bottom: 1,
+    width: 7,
+    height: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  xLine: {
+    position: 'absolute',
+    width: 7,
+    height: 1.6,
+    borderRadius: 1,
   },
   subIconWrap: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
   subArrow: {

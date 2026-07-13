@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { FixtureEvent } from '../../lib/api/types';
 import { EVENT_TYPE, formatMinute } from '../../lib/utils/events';
+import { formatPlayerName, getEventPlayerName } from '../../lib/utils/playerName';
 import { useTheme } from '../../lib/theme/useTheme';
 
 interface Props {
@@ -25,7 +26,7 @@ export function ScorersList({ events, teamId }: Props) {
   // Group by player name
   const byPlayer = new Map<string, string[]>();
   for (const e of goals) {
-    const name = e.player_name || '<TBD>';
+    const name = getEventPlayerName(e) ?? '<TBD>';
     if (!byPlayer.has(name)) byPlayer.set(name, []);
     byPlayer.get(name)!.push(formatMinute(e));
   }
@@ -35,22 +36,13 @@ export function ScorersList({ events, teamId }: Props) {
       {[...byPlayer.entries()].map(([name, minutes]) => (
         <View key={name} style={styles.row}>
           <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
-            {abbreviateName(name)}
+            {formatPlayerName(name, 'compact')}
           </Text>
           <Text style={[styles.mins, { color: colors.textMuted }]}>{minutes.join(', ')}</Text>
         </View>
       ))}
     </View>
   );
-}
-
-function abbreviateName(name: string): string {
-  const parts = name.trim().split(' ');
-  if (parts.length <= 1) return name;
-  // Keep last name full, abbreviate first/middle names
-  const last = parts[parts.length - 1];
-  const abbrevs = parts.slice(0, -1).map((p) => p[0] + '.');
-  return [...abbrevs, last].join(' ');
 }
 
 const styles = StyleSheet.create({

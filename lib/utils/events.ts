@@ -1,4 +1,5 @@
 import type { FixtureEvent } from '../api/types';
+import { getEventRelatedPlayerName } from './playerName';
 
 export const EVENT_TYPE = {
   GOAL: 14,
@@ -76,7 +77,7 @@ export function buildTimeline(
 export function getEventLabel(event: FixtureEvent): { line1Sub: string; iconType: string } {
   switch (event.type_id) {
     case EVENT_TYPE.GOAL: {
-      const assist = event.related_player_name || event.related_player?.name;
+      const assist = getEventRelatedPlayerName(event);
       return {
         line1Sub: assist ? `${assist}` : '',
         iconType: 'goal',
