@@ -88,14 +88,20 @@ export function MatchRow({ fixture, isLast, showDate }: Props) {
               </Text>
             )}
             {stateResult.label ? (
-              <Text
-                style={[
-                  styles.statusText,
-                  { color: stateResult.type === 'cancelled' ? colors.live : colors.textMuted },
-                ]}
-              >
-                {stateResult.label}
-              </Text>
+              stateResult.type === 'halftime' ? (
+                <View style={[styles.htBadge, { borderColor: colors.accent, backgroundColor: colors.accentSoft }]}>
+                  <Text style={[styles.htBadgeText, { color: colors.accent }]}>{stateResult.label}</Text>
+                </View>
+              ) : (
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: stateResult.type === 'cancelled' ? colors.live : colors.textMuted },
+                  ]}
+                >
+                  {stateResult.label}
+                </Text>
+              )
             ) : null}
           </View>
         )}
@@ -204,6 +210,19 @@ const styles = StyleSheet.create({
     fontSize: 9,
     textAlign: 'center',
     letterSpacing: 0.1,
+  },
+  htBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  htBadgeText: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+    letterSpacing: 0.2,
   },
   teamHome: {
     flex: 1,
