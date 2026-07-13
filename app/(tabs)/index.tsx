@@ -28,6 +28,9 @@ import { DaySelector } from '../../components/fixtures/DaySelector';
 import { FilterChips, FilterType } from '../../components/fixtures/FilterChips';
 import { LeagueSection } from '../../components/fixtures/LeagueSection';
 import { MatchRow } from '../../components/fixtures/MatchRow';
+import { TodayButton } from '../../components/fixtures/TodayButton';
+
+const TODAY_BUTTON_THRESHOLD_DAYS = 4;
 
 function addDays(date: Date, delta: number): Date {
   const d = new Date(date);
@@ -290,6 +293,9 @@ export default function LeikirScreen() {
     if (!selectedIsToday && activeFilter === 'live') setActiveFilter('all');
   }, [selectedIsToday, activeFilter]);
 
+  const daysFromToday = Math.round((selectedDate.getTime() - today.getTime()) / 86_400_000);
+  const showTodayButton = Math.abs(daysFromToday) >= TODAY_BUTTON_THRESHOLD_DAYS;
+
   const { followedIds: followedTeamIds } = useFollowedTeams();
   const followedTeamSet = useMemo(() => new Set(followedTeamIds), [followedTeamIds]);
   const hasFollows = followedTeamIds.length > 0;
@@ -491,6 +497,12 @@ export default function LeikirScreen() {
           pointerEvents="none"
         />
       </View>
+
+      <TodayButton
+        visible={showTodayButton}
+        bottom={insets.bottom + 80}
+        onPress={() => setSelectedDate(today)}
+      />
 
       <DatePickerModal
         visible={showDatePicker}
