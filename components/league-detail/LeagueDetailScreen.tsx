@@ -27,6 +27,7 @@ import { useTheme } from '../../lib/theme/useTheme';
 import { useQuery } from '@tanstack/react-query';
 import { useLeagueMeta, useLeagueStandingsGrouped } from '../../lib/hooks/useLeagueDetail';
 import { fetchTopScorers } from '../../lib/api/teamDetail';
+import { fetchTeamsBySeason } from '../../lib/api/teams';
 import { useFixturesByDate } from '../../lib/api/fixtures';
 import { useLeagueFixtures } from '../../lib/hooks/useLeagueFixtures';
 import { getLiveTeamIds } from '../../lib/utils/liveTeams';
@@ -44,6 +45,7 @@ import { StandingsTable } from './StandingsTable';
 import { SeasonDropdown } from './SeasonDropdown';
 import { LeaguePlaceholderTab } from './LeaguePlaceholderTab';
 import { LeagueTopScorers } from './LeagueTopScorers';
+import { LeagueTeamsList } from './LeagueTeamsList';
 import { RoundSelector } from './RoundSelector';
 import { LeagueFixturesContent } from './LeagueFixturesContent';
 
@@ -73,6 +75,13 @@ export function LeagueDetailScreen({ leagueId }: Props) {
   const { data: topScorers = [], isLoading: scorersLoading } = useQuery({
     queryKey: ['league-top-scorers', activeSeasonId],
     queryFn: () => fetchTopScorers(activeSeasonId!),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeSeasonId != null,
+  });
+
+  const { data: teams = [], isLoading: teamsLoading } = useQuery({
+    queryKey: ['league-teams', activeSeasonId],
+    queryFn: () => fetchTeamsBySeason(activeSeasonId!),
     staleTime: 5 * 60 * 1000,
     enabled: activeSeasonId != null,
   });
@@ -345,6 +354,14 @@ export function LeagueDetailScreen({ leagueId }: Props) {
           </View>
         ) : (
           <LeagueTopScorers scorers={topScorers} />
+        );
+      case 'lid':
+        return teamsLoading ? (
+          <View style={styles.loading}>
+            <Text style={[styles.loadingText, { color: colors.textMuted }]}>Sæki lið…</Text>
+          </View>
+        ) : (
+          <LeagueTeamsList teams={teams} />
         );
       default:
         return <LeaguePlaceholderTab />;
