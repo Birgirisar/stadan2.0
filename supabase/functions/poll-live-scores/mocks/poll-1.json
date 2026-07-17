@@ -1,0 +1,147 @@
+{
+  "data": [
+    {
+      "id": 19384512,
+      "sport_id": 1,
+      "league_id": 345,
+      "season_id": 23614,
+      "round_id": 339069,
+      "state_id": 3,
+      "name": "Valur vs KR",
+      "starting_at": "2026-07-17 18:15:00",
+      "starting_at_timestamp": 1752776100,
+      "result_info": null,
+      "participants": [
+        {
+          "id": 214585,
+          "name": "Valur",
+          "short_code": "VAL",
+          "image_path": "https://cdn.sportmonks.com/images/soccer/teams/9/214585.png",
+          "meta": { "location": "home", "winner": null }
+        },
+        {
+          "id": 214543,
+          "name": "KR",
+          "short_code": "KR",
+          "image_path": "https://cdn.sportmonks.com/images/soccer/teams/23/214543.png",
+          "meta": { "location": "away", "winner": null }
+        }
+      ],
+      "scores": [
+        {
+          "id": 1,
+          "fixture_id": 19384512,
+          "type_id": 1525,
+          "participant_id": 214585,
+          "score": { "goals": 1, "participant": "home" },
+          "description": "CURRENT"
+        },
+        {
+          "id": 2,
+          "fixture_id": 19384512,
+          "type_id": 1525,
+          "participant_id": 214543,
+          "score": { "goals": 1, "participant": "away" },
+          "description": "CURRENT"
+        }
+      ],
+      "state": {
+        "id": 3,
+        "state": "INPLAY_2ND_HALF",
+        "name": "2nd Half",
+        "short_name": "2H",
+        "developer_name": "INPLAY_2ND_HALF",
+        "is_live": true,
+        "is_pending": false,
+        "is_final_state": false,
+        "is_cancelled": false
+      },
+      "events": [
+        {
+          "id": 88510001,
+          "fixture_id": 19384512,
+          "period_id": 292731,
+          "participant_id": 214585,
+          "type_id": 14,
+          "minute": 12,
+          "extra_minute": null,
+          "player_id": 501234,
+          "related_player_id": null,
+          "player_name": "Kristján Kristjánsson",
+          "related_player_name": null
+        },
+        {
+          "id": 88510002,
+          "fixture_id": 19384512,
+          "period_id": 292732,
+          "participant_id": 214543,
+          "type_id": 14,
+          "minute": 34,
+          "extra_minute": null,
+          "player_id": 502345,
+          "related_player_id": null,
+          "player_name": "Gunnar Gunnarsson",
+          "related_player_name": null
+        }
+      ]
+    },
+    {
+      "id": 19384600,
+      "sport_id": 1,
+      "league_id": 345,
+      "season_id": 23614,
+      "round_id": 339069,
+      "state_id": 2,
+      "name": "Breiðablik vs FH",
+      "starting_at": "2026-07-17 18:15:00",
+      "starting_at_timestamp": 1752776100,
+      "result_info": null,
+      "participants": [
+        {
+          "id": 214479,
+          "name": "Breiðablik",
+          "short_code": "BRE",
+          "image_path": "https://cdn.sportmonks.com/images/soccer/teams/15/214479.png",
+          "meta": { "location": "home", "winner": null }
+        },
+        {
+          "id": 214432,
+          "name": "FH",
+          "short_code": "FH",
+          "image_path": "https://cdn.sportmonks.com/images/soccer/teams/8/214432.png",
+          "meta": { "location": "away", "winner": null }
+        }
+      ],
+      "scores": [
+        {
+          "id": 3,
+          "fixture_id": 19384600,
+          "type_id": 1525,
+          "participant_id": 214479,
+          "score": { "goals": 0, "participant": "home" },
+          "description": "CURRENT"
+        },
+        {
+          "id": 4,
+          "fixture_id": 19384600,
+          "type_id": 1525,
+          "participant_id": 214432,
+          "score": { "goals": 0, "participant": "away" },
+          "description": "CURRENT"
+        }
+      ],
+      "state": {
+        "id": 2,
+        "state": "INPLAY_1ST_HALF",
+        "name": "1st Half",
+        "short_name": "1H",
+        "developer_name": "INPLAY_1ST_HALF",
+        "is_live": true,
+        "is_pending": false,
+        "is_final_state": false,
+        "is_cancelled": false
+      },
+      "events": []
+    }
+  ]
+}
