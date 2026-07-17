@@ -24,6 +24,7 @@
       "expo-router",
       "expo-system-ui",
       "expo-font",
+      "expo-notifications",
       [
         "expo-build-properties",
         {

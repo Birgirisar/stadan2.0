@@ -10,18 +10,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Easing,
-  Modal,
+  AppState,
   Pressable,
   ScrollView,
   // Share,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFollowedTeams } from '../lib/hooks/useFollowedTeams';
+import { useNotificationPreference } from '../lib/hooks/useNotificationPreference';
+import {
+  disableNotifications,
+  enableNotifications,
+  getNotificationPermissionStatus,
+  registerForPushNotificationsAsync,
+} from '../lib/notifications';
 import { useTheme } from '../lib/theme/useTheme';
 import { useThemePreference } from '../lib/hooks/useThemePreference';
 import type { ThemeColors } from '../lib/theme/colors';
@@ -45,83 +53,6 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
     <Animated.View style={[styles.toast, { opacity }]} pointerEvents="none">
       <Text style={styles.toastText}>{message}</Text>
     </Animated.View>
-  );
-}
-
-// ── NotificationsSheet ────────────────────────────────────────────────────────
-
-function NotificationsSheet({
-  visible,
-  onClose,
-  colors,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  colors: ThemeColors;
-}) {
-  const translateY = useRef(new Animated.Value(400)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(translateY, {
-          toValue: 0,
-          tension: 65,
-          friction: 11,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropOpacity, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
-
-  function handleClose() {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 400,
-        duration: 220,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-    ]).start(() => onClose());
-  }
-
-  return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
-      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={handleClose}>
-          <Animated.View
-            style={[
-              styles.sheet,
-              { backgroundColor: colors.surface, transform: [{ translateY }] },
-            ]}
-            onStartShouldSetResponder={() => true}
-          >
-            <Pressable onPress={handleClose} style={styles.grabberArea}>
-              <View style={[styles.grabber, { backgroundColor: colors.borderStrong }]} />
-            </Pressable>
-            <View style={styles.sheetContent}>
-              <Text style={[styles.sheetTitle, { color: colors.text }]}>
-                Tilkynningar koma fljótlega
-              </Text>
-              <Text style={[styles.sheetBody, { color: colors.textSecondary }]}>
-                Þegar þú fylgist með lið eða deild færðu tilkynningar um leiki, mörk og úrslit.
-              </Text>
-            </View>
-          </Animated.View>
-        </Pressable>
-      </Animated.View>
-    </Modal>
   );
 }
 
@@ -227,16 +158,62 @@ export default function StillingarScreen() {
   const router = useRouter();
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
 
-  const [notifSheetVisible, setNotifSheetVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // TODO: dev-only push token test — remove once the real notifications feature ships
+  const [devPushToken, setDevPushToken] = useState<string | null>(null);
+  const [devPushLoading, setDevPushLoading] = useState(false);
+
+  const { followedIds } = useFollowedTeams();
+  const { enabled: notificationsEnabled, setEnabled: setNotificationsEnabled } = useNotificationPreference();
+  const [osPermissionDenied, setOsPermissionDenied] = useState(false);
+  const [notifBusy, setNotifBusy] = useState(false);
 
   const showToast = (msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToastMessage(msg);
     setToastVisible(true);
     toastTimer.current = setTimeout(() => setToastVisible(false), 2500);
+  };
+
+  // Permission can change from iOS Settings while the app is backgrounded,
+  // so recheck whenever the app comes back to the foreground, not just on mount.
+  useEffect(() => {
+    const checkPermission = () => {
+      getNotificationPermissionStatus().then((status) => setOsPermissionDenied(status === 'denied'));
+    };
+    checkPermission();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') checkPermission();
+    });
+    return () => sub.remove();
+  }, []);
+
+  const handleToggleNotifications = async (value: boolean) => {
+    setNotifBusy(true);
+    try {
+      if (value) {
+        const result = await enableNotifications(followedIds);
+        if (result.status === 'granted') {
+          setNotificationsEnabled(true);
+          setOsPermissionDenied(false);
+          showToast('Tilkynningar kveiktar');
+        } else if (result.status === 'denied') {
+          setOsPermissionDenied(true);
+          showToast('Leyfi hafnað fyrir tilkynningar');
+        } else {
+          showToast('Virkar ekki í hermi — prófaðu á alvöru síma');
+        }
+      } else {
+        setNotificationsEnabled(false);
+        await disableNotifications();
+        showToast('Tilkynningar slökktar');
+      }
+    } finally {
+      setNotifBusy(false);
+    }
   };
 
   // const handleShare = async () => {
@@ -278,6 +255,32 @@ export default function StillingarScreen() {
     }
   };
 
+  // TODO: dev-only push token test — remove once the real notifications feature ships
+  const handleTestPush = async () => {
+    setDevPushLoading(true);
+    setDevPushToken(null);
+    try {
+      const result = await registerForPushNotificationsAsync();
+      if (result.status === 'granted') {
+        setDevPushToken(result.token);
+      } else if (result.status === 'denied') {
+        showToast('Leyfi fyrir tilkynningar hafnað');
+      } else {
+        showToast('Virkar ekki í hermi — prófaðu á alvöru síma');
+      }
+    } catch {
+      showToast('Eitthvað fór úrskeiðis');
+    } finally {
+      setDevPushLoading(false);
+    }
+  };
+
+  const handleCopyDevToken = async () => {
+    if (!devPushToken) return;
+    await Clipboard.setStringAsync(devPushToken);
+    showToast('Token afritað');
+  };
+
   const nativeVersion = Application.nativeApplicationVersion;
   const nativeBuild = Application.nativeBuildVersion;
   const version = nativeVersion ?? Constants.expoConfig?.version ?? '—';
@@ -316,22 +319,63 @@ export default function StillingarScreen() {
         {/* TILKYNNINGAR */}
         <SectionHeader label="TILKYNNINGAR" colors={colors} />
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <TouchableOpacity onPress={() => setNotifSheetVisible(true)} activeOpacity={0.7}>
-            <View style={styles.row}>
-              <View style={styles.rowLeft}>
-                <Ionicons name="notifications-outline" size={18} color={colors.textSecondary} />
+          <View style={styles.row}>
+            <View style={styles.rowLeft}>
+              <Ionicons name="notifications-outline" size={18} color={colors.textSecondary} />
+              <View style={{ flex: 1 }}>
                 <Text style={[styles.rowLabel, { color: colors.text }]}>Tilkynningar</Text>
-              </View>
-              <View style={styles.rowRight}>
-                <View style={[styles.comingSoonPill, { backgroundColor: colors.goldSoft }]}>
-                  <Text style={[styles.comingSoonText, { color: colors.gold }]}>
-                    KEMUR FLJÓTLEGA
-                  </Text>
-                </View>
+                <Text style={[styles.rowHint, { color: colors.textMuted }]} numberOfLines={2}>
+                  {osPermissionDenied
+                    ? 'Leyfi vantar — kveiktu í stillingum símans'
+                    : 'Tilkynning þegar liðin þín skora eða leik lýkur'}
+                </Text>
               </View>
             </View>
-          </TouchableOpacity>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={handleToggleNotifications}
+              disabled={notifBusy}
+              trackColor={{ false: colors.surfaceSunken, true: colors.accent }}
+              ios_backgroundColor={colors.surfaceSunken}
+            />
+          </View>
         </View>
+
+        {/* DEV ONLY — TODO: remove this whole section once real push notifications ship */}
+        {__DEV__ && (
+          <>
+            <SectionHeader label="PRÓFUN (DEV)" colors={colors} />
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <TouchableOpacity onPress={handleTestPush} activeOpacity={0.7} disabled={devPushLoading}>
+                <View style={styles.row}>
+                  <View style={styles.rowLeft}>
+                    <Ionicons name="flask-outline" size={18} color={colors.textSecondary} />
+                    <Text style={[styles.rowLabel, { color: colors.text }]}>Prófa tilkynningar</Text>
+                  </View>
+                  <View style={styles.rowRight}>
+                    <Text style={[styles.rowValue, { color: colors.textSecondary }]}>
+                      {devPushLoading ? 'Sæki token…' : 'Keyra'}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+              {devPushToken && (
+                <TouchableOpacity
+                  onPress={handleCopyDevToken}
+                  activeOpacity={0.7}
+                  style={[styles.devTokenBox, { borderTopColor: colors.border }]}
+                >
+                  <Text style={[styles.devTokenText, { color: colors.textSecondary }]} selectable>
+                    {devPushToken}
+                  </Text>
+                  <Text style={[styles.devTokenHint, { color: colors.textMuted }]}>
+                    Ýttu til að afrita — límdu inn á expo.dev/notifications
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        )}
 
         {/* TUNGUMÁL */}
         <SectionHeader label="TUNGUMÁL" colors={colors} />
@@ -433,12 +477,6 @@ export default function StillingarScreen() {
         </BlurView>
       </View>
 
-      <NotificationsSheet
-        visible={notifSheetVisible}
-        onClose={() => setNotifSheetVisible(false)}
-        colors={colors}
-      />
-
       <Toast message={toastMessage} visible={toastVisible} />
     </View>
   );
@@ -519,16 +557,24 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 13,
   },
-  comingSoonPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
+  devTokenBox: {
+    borderTopWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 4,
   },
-  comingSoonText: {
-    fontFamily: 'Manrope_600SemiBold',
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  devTokenText: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 12,
+  },
+  devTokenHint: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 11,
+  },
+  rowHint: {
+    fontFamily: 'Manrope_400Regular',
+    fontSize: 11,
+    marginTop: 2,
   },
   // Segmented control
   segContainer: {
@@ -560,51 +606,6 @@ const styles = StyleSheet.create({
   segText: {
     fontFamily: 'Manrope_700Bold',
     fontSize: 12.5,
-  },
-  // Bottom sheet
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  sheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 44,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 20,
-  },
-  grabberArea: {
-    alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 8,
-  },
-  grabber: {
-    width: 38,
-    height: 4,
-    borderRadius: 999,
-  },
-  sheetContent: {
-    paddingHorizontal: 24,
-    paddingTop: 4,
-    gap: 12,
-  },
-  sheetTitle: {
-    fontFamily: 'BricolageGrotesque_700Bold',
-    fontSize: 20,
-    letterSpacing: -0.3,
-    lineHeight: 26,
-  },
-  sheetBody: {
-    fontFamily: 'Manrope_500Medium',
-    fontSize: 15,
-    lineHeight: 22,
   },
   // Toast
   toast: {

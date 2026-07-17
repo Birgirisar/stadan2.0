@@ -18,6 +18,8 @@ import { useTheme } from '../../lib/theme/useTheme';
 import { useTeamDetail } from '../../lib/hooks/useTeamDetail';
 import { useTeamFixtures } from '../../lib/hooks/useTeamFixtures';
 import { useFollowedTeams } from '../../lib/hooks/useFollowedTeams';
+import { useNotificationPreference } from '../../lib/hooks/useNotificationPreference';
+import { enableNotifications } from '../../lib/notifications';
 import { LEAGUES } from '../../constants/leagues';
 import { TeamBadge } from '../../components/fixtures/TeamBadge';
 import { TeamHeader } from '../../components/team-detail/TeamHeader';
@@ -69,12 +71,41 @@ export default function TeamDetailScreen() {
     teamError,
   } = useTeamDetail(teamId);
 
-  const { toggle, isFollowed } = useFollowedTeams();
+  const { toggle, isFollowed, followedIds } = useFollowedTeams();
   const followed = isFollowed(teamId);
+
+  const {
+    asked: notifAsked,
+    enabled: notifEnabled,
+    setEnabled: setNotifEnabled,
+    markAsked: markNotifAsked,
+  } = useNotificationPreference();
 
   // ── UI state ───────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TeamSubTabId>('yfirlit');
   const [teamHeaderH, setTeamHeaderH] = useState(TEAM_HEADER_ESTIMATE);
+  const [showNotifCta, setShowNotifCta] = useState(false);
+
+  const handleFollowPress = () => {
+    const wasFirstFollow = followedIds.length === 0 && !followed;
+    toggle(teamId);
+    if (wasFirstFollow && !notifAsked && !notifEnabled) {
+      setShowNotifCta(true);
+    }
+  };
+
+  const handleEnableNotifFromCta = async () => {
+    setShowNotifCta(false);
+    const result = await enableNotifications(followedIds);
+    if (result.status === 'granted') {
+      setNotifEnabled(true);
+    }
+  };
+
+  const handleDismissNotifCta = () => {
+    setShowNotifCta(false);
+    markNotifAsked();
+  };
 
   const scrollViewRef = useRef<import('react-native').ScrollView>(null);
 
@@ -413,7 +444,7 @@ export default function TeamDetailScreen() {
           </Animated.View>
 
           <Pressable
-            onPress={() => toggle(teamId)}
+            onPress={handleFollowPress}
             style={({ pressed }) => [
               styles.followBtn,
               followed
@@ -455,6 +486,25 @@ export default function TeamDetailScreen() {
         </View>
       </Animated.View>
 
+      {showNotifCta && team && (
+        <View
+          style={[
+            styles.notifCta,
+            { bottom: insets.bottom + 96, backgroundColor: colors.surfaceElev, borderColor: colors.border },
+          ]}
+        >
+          <Ionicons name="notifications-outline" size={18} color={colors.accent} />
+          <Text style={[styles.notifCtaText, { color: colors.text }]} numberOfLines={2}>
+            Fáðu tilkynningu þegar {team.name} skorar
+          </Text>
+          <Pressable onPress={handleEnableNotifFromCta} hitSlop={6}>
+            <Text style={[styles.notifCtaAction, { color: colors.accent }]}>Kveikja</Text>
+          </Pressable>
+          <Pressable onPress={handleDismissNotifCta} hitSlop={6}>
+            <Ionicons name="close" size={16} color={colors.textMuted} />
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -672,4 +722,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   retryText: { fontFamily: 'Manrope_700Bold', fontSize: 14 },
+
+  notifCta: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  notifCtaText: {
+    flex: 1,
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 13,
+  },
+  notifCtaAction: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+  },
 });

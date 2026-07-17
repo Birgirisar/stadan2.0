@@ -16,7 +16,8 @@ import {
 } from '@expo-google-fonts/manrope';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -29,6 +30,9 @@ function onAppStateChange(status: AppStateStatus) {
   focusManager.setFocused(status === 'active');
 }
 import { BottomDock } from '../components/ui/BottomDock';
+import { useFollowedTeams } from '../lib/hooks/useFollowedTeams';
+import { useNotificationPreference } from '../lib/hooks/useNotificationPreference';
+import { scheduleSyncSubscription } from '../lib/notifications';
 import { ThemeProvider } from '../lib/theme/ThemeProvider';
 import { useTheme } from '../lib/theme/useTheme';
 
@@ -56,10 +60,36 @@ function AppShell() {
 }
 
 export default function RootLayout() {
+  const router = useRouter();
+  const { followedIds, loaded: teamsLoaded } = useFollowedTeams();
+  const { enabled: notificationsEnabled, loaded: notifPrefLoaded } = useNotificationPreference();
+  const lastNotificationResponse = Notifications.useLastNotificationResponse();
+
   useEffect(() => {
     const sub = AppState.addEventListener('change', onAppStateChange);
     return () => sub.remove();
   }, []);
+
+  // Syncs the current token + followed teams on launch and on every change —
+  // debounced, so rapid follow/unfollow taps don't fire one request each.
+  useEffect(() => {
+    if (!teamsLoaded || !notifPrefLoaded || !notificationsEnabled) return;
+    scheduleSyncSubscription(followedIds);
+  }, [teamsLoaded, notifPrefLoaded, notificationsEnabled, followedIds]);
+
+  // Deep-link on notification tap — covers both a warm tap (app already
+  // running) and a cold start (app launched by tapping the notification),
+  // since useLastNotificationResponse reflects the launch response too.
+  useEffect(() => {
+    const raw = lastNotificationResponse?.notification.request.content.data?.fixtureId;
+    const fixtureId =
+      typeof raw === 'number' ? raw : typeof raw === 'string' && /^\d+$/.test(raw) ? Number(raw) : null;
+
+    if (fixtureId != null) {
+      router.push(`/match/${fixtureId}` as any);
+      Notifications.clearLastNotificationResponse();
+    }
+  }, [lastNotificationResponse]);
 
   const [fontsLoaded, fontError] = useFonts({
     Manrope_400Regular,
