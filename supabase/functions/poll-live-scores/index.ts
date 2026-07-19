@@ -14,10 +14,17 @@ import { dispatchExpoPushes, type PushSubscription, type PushTarget } from "../_
 import mockPoll1 from "./mocks/poll-1.json" with { type: "json" };
 import mockPoll2 from "./mocks/poll-2.json" with { type: "json" };
 
-const SPORTMONKS_URL = "https://api.sportmonks.com/v3/football/livescores"; // /inplay
+const SPORTMONKS_URL = "https://api.sportmonks.com/v3/football/livescores"; // 15-min post-FT retention, unlike /inplay
 // `state` must be requested explicitly — without it fixture.state is always
 // undefined, so isFinal() never fires and full-time notifications never send.
-const SPORTMONKS_INCLUDE = "events;participants;scores;state";
+// `periods` is needed for catch-up suppression (elapsed match minute).
+const SPORTMONKS_INCLUDE = "events;participants;scores;state;periods";
+
+// A fixture we've never polled before, already more than this many minutes
+// underway (or already finished), is treated as catch-up: its existing
+// events are seeded into processed_events without notifying, so an outage
+// or first deploy mid-match doesn't burst every past goal/card as "new".
+const CATCH_UP_MINUTE_THRESHOLD = 5;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -71,12 +78,18 @@ interface FixtureEvent {
   player_name?: string | null;
 }
 
+interface Period {
+  ticking?: boolean;
+  minutes?: number | null;
+}
+
 interface Fixture {
   id: number;
   participants?: Participant[];
   scores?: ScoreEntry[];
   state?: FixtureState;
   events?: FixtureEvent[];
+  periods?: Period[];
 }
 
 type CandidateKind = "goal" | "red" | "ft";
@@ -86,6 +99,9 @@ interface Candidate {
   fixture: Fixture;
   kind: CandidateKind;
   event?: FixtureEvent;
+  // true when this fixture was never polled before and is already well
+  // underway (or finished) — seeded into processed_events, never pushed.
+  seedOnly: boolean;
 }
 
 function getParticipants(fixture: Fixture): { home?: Participant; away?: Participant } {
@@ -129,6 +145,24 @@ function isFinal(fixture: Fixture): boolean {
   const state = fixture.state;
   if (!state) return false;
   return !!state.is_final_state || FINAL_STATE_CODES.has(state.state ?? "");
+}
+
+// Mirrors lib/utils/state.ts's getLiveMinute(): the ticking period's minute
+// count. Returns null if unknown (e.g. no period has started ticking yet).
+function getElapsedMinute(fixture: Fixture): number | null {
+  const active = (fixture.periods ?? []).find((p) => p.ticking === true);
+  return active?.minutes ?? null;
+}
+
+// A fixture qualifies for catch-up seeding when we've never polled it before
+// AND it's already well underway — including already finished, since a
+// fixture that's finished the very first time we ever see it (e.g. after a
+// long outage) has no ticking period left to report a minute from at all.
+function isCatchUp(fixture: Fixture, alreadyKnown: boolean): boolean {
+  if (alreadyKnown) return false;
+  if (isFinal(fixture)) return true;
+  const minute = getElapsedMinute(fixture);
+  return minute != null && minute > CATCH_UP_MINUTE_THRESHOLD;
 }
 
 function minuteDative(e: FixtureEvent): string {
@@ -250,43 +284,73 @@ async function loadFixtures(mock: string | null): Promise<
   }
 }
 
+function respond(summary: Record<string, unknown>, status = 200): Response {
+  console.log("[poll-live-scores]", JSON.stringify(summary));
+  return Response.json(summary, { status });
+}
+
 Deno.serve(async (req) => {
   if (req.headers.get("Authorization") !== `Bearer ${ADMIN_TOKEN}`) {
-    return Response.json({ error: "unauthorized" }, { status: 401 });
+    return respond({ error: "unauthorized" }, 401);
   }
 
   const mock = new URL(req.url).searchParams.get("mock");
 
   const loaded = await loadFixtures(mock);
   if (!loaded.ok) {
-    return Response.json({ error: loaded.error }, { status: 502 });
+    return respond({ error: loaded.error }, 502);
   }
   const { fixtures } = loaded;
 
   if (fixtures.length === 0) {
-    return Response.json({ live: 0, newEvents: 0, sent: 0, failed: 0 });
+    return respond({ live: 0, newEvents: 0, sent: 0, failed: 0, mode: "normal", seededFixtures: 0 });
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+  // Catch-up suppression only applies to real polls — mock mode always
+  // behaves as documented (mock=1/mock=2 send normally, no seeding).
+  const knownFixtureIds = new Set<number>();
+  if (mock == null) {
+    const { data: knownRows, error: knownError } = await supabase
+      .from("processed_events")
+      .select("fixture_id")
+      .in("fixture_id", fixtures.map((f) => f.id));
+
+    if (knownError) {
+      console.error("[poll-live-scores] failed to check known fixtures:", knownError);
+      return respond({ error: knownError.message }, 500);
+    }
+
+    for (const row of knownRows ?? []) knownFixtureIds.add(row.fixture_id as number);
+  }
+
   const candidates: Candidate[] = [];
+  let seededFixtures = 0;
+
   for (const fixture of fixtures) {
+    const alreadyKnown = mock != null || knownFixtureIds.has(fixture.id);
+    const seedOnly = isCatchUp(fixture, alreadyKnown);
+    if (seedOnly) seededFixtures += 1;
+
     for (const event of fixture.events ?? []) {
       if (GOAL_TYPES.has(event.type_id)) {
-        candidates.push({ key: event.id, fixture, kind: "goal", event });
+        candidates.push({ key: event.id, fixture, kind: "goal", event, seedOnly });
       } else if (RED_CARD_TYPES.has(event.type_id)) {
-        candidates.push({ key: event.id, fixture, kind: "red", event });
+        candidates.push({ key: event.id, fixture, kind: "red", event, seedOnly });
       }
     }
     // Synthetic key: negative fixture id. Real Sportmonks event ids are
     // always positive, so this can never collide with a real event.
     if (isFinal(fixture)) {
-      candidates.push({ key: -fixture.id, fixture, kind: "ft" });
+      candidates.push({ key: -fixture.id, fixture, kind: "ft", seedOnly });
     }
   }
 
+  const mode = seededFixtures > 0 ? "seeded" : "normal";
+
   if (candidates.length === 0) {
-    return Response.json({ live: fixtures.length, newEvents: 0, sent: 0, failed: 0 });
+    return respond({ live: fixtures.length, newEvents: 0, sent: 0, failed: 0, mode, seededFixtures });
   }
 
   const { data: existing, error: existingError } = await supabase
@@ -296,29 +360,33 @@ Deno.serve(async (req) => {
 
   if (existingError) {
     console.error("[poll-live-scores] failed to check processed_events:", existingError);
-    return Response.json({ error: existingError.message }, { status: 500 });
+    return respond({ error: existingError.message }, 500);
   }
 
   const existingIds = new Set((existing ?? []).map((r) => r.event_id as number));
   const fresh = candidates.filter((c) => !existingIds.has(c.key));
 
   if (fresh.length === 0) {
-    return Response.json({ live: fixtures.length, newEvents: 0, sent: 0, failed: 0 });
+    return respond({ live: fixtures.length, newEvents: 0, sent: 0, failed: 0, mode, seededFixtures });
   }
 
   // Record BEFORE dispatch — a duplicate push is worse than a missed one.
+  // This includes seed-only candidates: seeding IS inserting the row so
+  // future polls treat them as already-processed.
   const { error: insertError } = await supabase
     .from("processed_events")
     .insert(fresh.map((c) => ({ event_id: c.key, fixture_id: c.fixture.id })));
 
   if (insertError) {
     console.error("[poll-live-scores] failed to record processed events:", insertError);
-    return Response.json({ error: insertError.message }, { status: 500 });
+    return respond({ error: insertError.message }, 500);
   }
 
   const targets: PushTarget[] = [];
 
   for (const candidate of fresh) {
+    if (candidate.seedOnly) continue; // silently seeded — never pushed
+
     const { home, away } = getParticipants(candidate.fixture);
     if (!home || !away) continue;
 
@@ -358,7 +426,7 @@ Deno.serve(async (req) => {
 
   const { sent, failed } = await dispatchExpoPushes(supabase, targets);
 
-  return Response.json({ live: fixtures.length, newEvents: fresh.length, sent, failed });
+  return respond({ live: fixtures.length, newEvents: fresh.length, sent, failed, mode, seededFixtures });
 });
 
 /* To invoke:
