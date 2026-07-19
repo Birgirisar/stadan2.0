@@ -1,12 +1,21 @@
-// Manually-invoked (for now) Sportmonks poller. Fetches currently in-play
-// fixtures, finds goal/red-card events and full-time transitions that
-// haven't been sent yet, and pushes Icelandic notifications to whoever
-// follows either team. Dedup is at-most-once: processed_events rows are
-// inserted BEFORE dispatch, so a crash mid-dispatch never causes a repeat.
+// Scheduled (pg_cron, every 30s) Sportmonks poller. Fetches currently
+// in-play fixtures, finds goal/red-card events and full-time transitions
+// that haven't been sent yet, and pushes Icelandic notifications to
+// whoever follows either team. Dedup is at-most-once: processed_events
+// rows are inserted BEFORE dispatch, so a crash mid-dispatch never causes
+// a repeat.
+//
+// Catch-up suppression: observed_fixtures records the first time we ever
+// see each fixture, independent of whether it has any events yet. Only a
+// fixture whose FIRST sighting is already mid-match (or finished) has that
+// one poll's candidates seeded silently, never pushed; every later poll
+// for it — and every fixture observed early — behaves normally, including
+// a first goal in minute 88 or a 0-0 game's FT.
 //
 // MOCK=1 / MOCK=2 (as a query param, e.g. ?mock=1) replay canned
-// Sportmonks-shaped snapshots from ./mocks so the whole pipeline can be
-// exercised without a real live match.
+// Sportmonks-shaped snapshots from ./mocks, going through this exact same
+// logic against the real observed_fixtures/processed_events tables — see
+// the mocks directory for the regression scenarios this covers.
 
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "@supabase/supabase-js";
@@ -20,10 +29,9 @@ const SPORTMONKS_URL = "https://api.sportmonks.com/v3/football/livescores"; // 1
 // `periods` is needed for catch-up suppression (elapsed match minute).
 const SPORTMONKS_INCLUDE = "events;participants;scores;state;periods";
 
-// A fixture we've never polled before, already more than this many minutes
-// underway (or already finished), is treated as catch-up: its existing
-// events are seeded into processed_events without notifying, so an outage
-// or first deploy mid-match doesn't burst every past goal/card as "new".
+// A fixture whose first-ever sighting is already more than this many
+// minutes underway (or already finished) is treated as catch-up for that
+// one poll — see the file header comment for the full mechanism.
 const CATCH_UP_MINUTE_THRESHOLD = 5;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -154,12 +162,14 @@ function getElapsedMinute(fixture: Fixture): number | null {
   return active?.minutes ?? null;
 }
 
-// A fixture qualifies for catch-up seeding when we've never polled it before
-// AND it's already well underway — including already finished, since a
-// fixture that's finished the very first time we ever see it (e.g. after a
-// long outage) has no ticking period left to report a minute from at all.
-function isCatchUp(fixture: Fixture, alreadyKnown: boolean): boolean {
-  if (alreadyKnown) return false;
+// Decides whether a fixture's FIRST-EVER sighting is already well underway
+// — including already finished, since a fixture that's finished the very
+// first time we ever see it (e.g. after a long outage) has no ticking
+// period left to report a minute from at all. This decision is made once,
+// at first observation, and stored in observed_fixtures — never
+// re-evaluated per-event, which is what let a scoreless fixture's first
+// goal (however late) keep getting silently swallowed.
+function isMidMatchOnFirstSight(fixture: Fixture): boolean {
   if (isFinal(fixture)) return true;
   const minute = getElapsedMinute(fixture);
   return minute != null && minute > CATCH_UP_MINUTE_THRESHOLD;
@@ -175,49 +185,20 @@ function minuteNominative(e: FixtureEvent): string {
   return `${min}. mínúta`;
 }
 
-function eventMinute(e: FixtureEvent): number {
-  return e.minute + (e.extra_minute ?? 0);
-}
-
-// The fixture's `scores` total reflects the CURRENT state, not the state at
-// the moment a given goal was scored. That's fine when exactly one new goal
-// is found per poll (the steady-state case), but if several goals for the
-// same fixture surface in the same poll — e.g. the very first poll after
-// deploying, when every already-scored goal looks "new" — every one of them
-// would otherwise report the same final scoreline. Replaying the fixture's
-// own goal events in minute order gives the correct running score for each.
-function runningScoreAt(
-  fixture: Fixture,
-  home: Participant,
-  targetEvent: FixtureEvent,
-): { home: number; away: number } {
-  const goalEvents = (fixture.events ?? [])
-    .filter((e) => GOAL_TYPES.has(e.type_id))
-    .sort((a, b) => eventMinute(a) - eventMinute(b) || a.id - b.id);
-
-  let homeGoals = 0;
-  let awayGoals = 0;
-
-  for (const e of goalEvents) {
-    const scoredForHome =
-      e.type_id === EVENT_TYPE.OWN_GOAL ? e.participant_id !== home.id : e.participant_id === home.id;
-
-    if (scoredForHome) homeGoals++;
-    else awayGoals++;
-
-    if (e.id === targetEvent.id) break;
-  }
-
-  return { home: homeGoals, away: awayGoals };
-}
-
+// Uses the fixture's authoritative CURRENT score (same source as the app's
+// own scoreboard) rather than trying to reconstruct the score-at-the-time
+// of this particular goal. When multiple new goals for one fixture land in
+// the same poll, they'll share this same (final) scoreline — that's an
+// accepted tradeoff; a correct-but-identical score beats a computed one
+// that can silently misattribute an own goal to the wrong side.
 function buildGoalMessage(
   fixture: Fixture,
   event: FixtureEvent,
   home: Participant,
   away: Participant,
 ): { title: string; body?: string } | null {
-  const { home: hGoals, away: aGoals } = runningScoreAt(fixture, home, event);
+  const { home: hGoals, away: aGoals } = getScore(fixture);
+  if (hGoals == null || aGoals == null) return null;
 
   const title = `⚽ Mark! ${home.name} ${hGoals}–${aGoals} ${away.name}`;
   const scorer = event.player_name;
@@ -308,30 +289,58 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  // Catch-up suppression only applies to real polls — mock mode always
-  // behaves as documented (mock=1/mock=2 send normally, no seeding).
-  const knownFixtureIds = new Set<number>();
-  if (mock == null) {
-    const { data: knownRows, error: knownError } = await supabase
-      .from("processed_events")
-      .select("fixture_id")
-      .in("fixture_id", fixtures.map((f) => f.id));
+  // observed_fixtures records, once and permanently, whether we'd already
+  // seen a fixture before this poll — decoupled from whether it has any
+  // goal/red/FT candidates. That decoupling is the fix: a fixture we've
+  // been watching since kickoff still counts as "known" even if it stayed
+  // scoreless for 80 minutes, so its eventual first goal (or a 0-0 game's
+  // FT) is never mistaken for a fresh catch-up case. Mock mode goes through
+  // the exact same logic, against the same table — see Step 3 mocks.
+  const fixtureIds = fixtures.map((f) => f.id);
+  const { data: observedRows, error: observedError } = await supabase
+    .from("observed_fixtures")
+    .select("fixture_id")
+    .in("fixture_id", fixtureIds);
 
-    if (knownError) {
-      console.error("[poll-live-scores] failed to check known fixtures:", knownError);
-      return respond({ error: knownError.message }, 500);
-    }
-
-    for (const row of knownRows ?? []) knownFixtureIds.add(row.fixture_id as number);
+  if (observedError) {
+    console.error("[poll-live-scores] failed to check observed_fixtures:", observedError);
+    return respond({ error: observedError.message }, 500);
   }
 
-  const candidates: Candidate[] = [];
-  let seededFixtures = 0;
+  const knownFixtureIds = new Set(
+    (observedRows ?? []).map((r: { fixture_id: number }) => r.fixture_id),
+  );
+  const seedOnlyByFixture = new Map<number, boolean>();
+  const newlyObserved: { fixture_id: number; seeded: boolean }[] = [];
 
   for (const fixture of fixtures) {
-    const alreadyKnown = mock != null || knownFixtureIds.has(fixture.id);
-    const seedOnly = isCatchUp(fixture, alreadyKnown);
-    if (seedOnly) seededFixtures += 1;
+    if (knownFixtureIds.has(fixture.id)) {
+      seedOnlyByFixture.set(fixture.id, false);
+      continue;
+    }
+    // First-ever sighting of this fixture. Decide now, once — every later
+    // poll finds it in observed_fixtures and skips straight to "normal".
+    const seeded = isMidMatchOnFirstSight(fixture);
+    seedOnlyByFixture.set(fixture.id, seeded);
+    newlyObserved.push({ fixture_id: fixture.id, seeded });
+  }
+
+  if (newlyObserved.length > 0) {
+    const { error: insertObservedError } = await supabase
+      .from("observed_fixtures")
+      .insert(newlyObserved);
+
+    if (insertObservedError) {
+      console.error("[poll-live-scores] failed to record observed_fixtures:", insertObservedError);
+      return respond({ error: insertObservedError.message }, 500);
+    }
+  }
+
+  const seededFixtures = newlyObserved.filter((f) => f.seeded).length;
+  const candidates: Candidate[] = [];
+
+  for (const fixture of fixtures) {
+    const seedOnly = seedOnlyByFixture.get(fixture.id) ?? false;
 
     for (const event of fixture.events ?? []) {
       if (GOAL_TYPES.has(event.type_id)) {
@@ -440,5 +449,29 @@ Deno.serve(async (req) => {
   curl -i --location --request POST 'https://<project-ref>.supabase.co/functions/v1/poll-live-scores?mock=1' \
     --header "apikey: $SUPABASE_ANON_KEY" \
     --header "Authorization: Bearer $ADMIN_TOKEN"
+
+  Regression scenarios covered by mock=1 then mock=2 (run against a clean
+  observed_fixtures/processed_events for fixtures 19384512, 19384600,
+  19384700 — see this session's notes for the cleanup query):
+
+  - Valur vs KR (19384512): observed from kickoff at minute 3, 0-0, no
+    events in poll 1. In poll 2 it's at minute 20 with a normal goal AND an
+    own goal (2-0). Since it was observed early, BOTH push — proving a
+    fixture that stays scoreless past minute 5 still isn't mistaken for
+    catch-up. Both notifications show the same authoritative "2-0" from
+    the scores include (not a computed running score), including the own
+    goal one, which also gets the "(sjálfsmark)" suffix.
+  - Breiðablik vs FH (19384600): observed from kickoff at minute 2, 0-0, no
+    events in poll 1. In poll 2 it's reached FT, still 0-0, plus one red
+    card. Both the red card AND the FT push — proving a 0-0 game's FT is
+    never swallowed just because it generated no earlier events.
+  - Fram vs Stjarnan (19384700): does NOT appear in poll 1 at all — its
+    first-ever sighting is in poll 2, already at minute 60 with 3 goals
+    already scored (2-1). All 3 are seeded silently, zero pushes — this is
+    the genuine cold-start case the suppression exists for, still working.
+
+  Expected poll-1 output: {"live":2,"newEvents":0,"sent":0,"failed":0,"mode":"normal","seededFixtures":0}
+  Expected poll-2 output: {"live":3,"newEvents":7,"sent":<subscriber-dependent>,"failed":0,"mode":"seeded","seededFixtures":1}
+  Expected poll-2 (repeated) output: {"live":3,"newEvents":0,"sent":0,"failed":0,"mode":"normal","seededFixtures":0}
 
 */
