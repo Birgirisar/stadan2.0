@@ -6,10 +6,10 @@
       "league_id": 345,
       "season_id": 23614,
       "round_id": 339069,
-      "state_id": 3,
+      "state_id": 2,
       "name": "Valur vs KR",
-      "starting_at": "2026-07-17 18:15:00",
-      "starting_at_timestamp": 1752776100,
+      "starting_at": "2026-07-19 18:00:00",
+      "starting_at_timestamp": 1752949200,
       "result_info": null,
       "participants": [
         {
@@ -41,21 +41,24 @@
           "fixture_id": 19384512,
           "type_id": 1525,
           "participant_id": 214543,
-          "score": { "goals": 1, "participant": "away" },
+          "score": { "goals": 0, "participant": "away" },
           "description": "CURRENT"
         }
       ],
       "state": {
-        "id": 3,
-        "state": "INPLAY_2ND_HALF",
-        "name": "2nd Half",
-        "short_name": "2H",
-        "developer_name": "INPLAY_2ND_HALF",
+        "id": 2,
+        "state": "INPLAY_1ST_HALF",
+        "name": "1st Half",
+        "short_name": "1H",
+        "developer_name": "INPLAY_1ST_HALF",
         "is_live": true,
         "is_pending": false,
         "is_final_state": false,
         "is_cancelled": false
       },
+      "periods": [
+        { "id": 292731, "ticking": true, "minutes": 20 }
+      ],
       "events": [
         {
           "id": 88510001,
@@ -63,7 +66,7 @@
           "period_id": 292731,
           "participant_id": 214585,
           "type_id": 14,
-          "minute": 12,
+          "minute": 15,
           "extra_minute": null,
           "player_id": 501234,
           "related_player_id": null,
@@ -73,27 +76,14 @@
         {
           "id": 88510002,
           "fixture_id": 19384512,
-          "period_id": 292732,
+          "period_id": 292731,
           "participant_id": 214543,
-          "type_id": 14,
-          "minute": 34,
+          "type_id": 15,
+          "minute": 20,
           "extra_minute": null,
           "player_id": 502345,
           "related_player_id": null,
           "player_name": "Gunnar Gunnarsson",
-          "related_player_name": null
-        },
-        {
-          "id": 88510003,
-          "fixture_id": 19384512,
-          "period_id": 292732,
-          "participant_id": 214585,
-          "type_id": 14,
-          "minute": 67,
-          "extra_minute": null,
-          "player_id": 501298,
-          "related_player_id": null,
-          "player_name": "Jón Jónsson",
           "related_player_name": null
         }
       ]
@@ -106,8 +96,8 @@
       "round_id": 339069,
       "state_id": 5,
       "name": "Breiðablik vs FH",
-      "starting_at": "2026-07-17 18:15:00",
-      "starting_at_timestamp": 1752776100,
+      "starting_at": "2026-07-19 18:00:00",
+      "starting_at_timestamp": 1752949200,
       "result_info": "Tie.",
       "participants": [
         {
@@ -154,6 +144,9 @@
         "is_final_state": true,
         "is_cancelled": false
       },
+      "periods": [
+        { "id": 292733, "ticking": false, "minutes": 90 }
+      ],
       "events": [
         {
           "id": 88520001,
@@ -166,6 +159,107 @@
           "player_id": 503456,
           "related_player_id": null,
           "player_name": "Ólafur Ólafsson",
+          "related_player_name": null
+        }
+      ]
+    },
+    {
+      "id": 19384700,
+      "sport_id": 1,
+      "league_id": 345,
+      "season_id": 23614,
+      "round_id": 339069,
+      "state_id": 3,
+      "name": "Fram vs Stjarnan",
+      "starting_at": "2026-07-19 18:00:00",
+      "starting_at_timestamp": 1752949200,
+      "result_info": null,
+      "participants": [
+        {
+          "id": 214601,
+          "name": "Fram",
+          "short_code": "FRAM",
+          "image_path": "https://cdn.sportmonks.com/images/soccer/teams/31/214601.png",
+          "meta": { "location": "home", "winner": null }
+        },
+        {
+          "id": 214602,
+          "name": "Stjarnan",
+          "short_code": "STJ",
+          "image_path": "https://cdn.sportmonks.com/images/soccer/teams/32/214602.png",
+          "meta": { "location": "away", "winner": null }
+        }
+      ],
+      "scores": [
+        {
+          "id": 5,
+          "fixture_id": 19384700,
+          "type_id": 1525,
+          "participant_id": 214601,
+          "score": { "goals": 2, "participant": "home" },
+          "description": "CURRENT"
+        },
+        {
+          "id": 6,
+          "fixture_id": 19384700,
+          "type_id": 1525,
+          "participant_id": 214602,
+          "score": { "goals": 1, "participant": "away" },
+          "description": "CURRENT"
+        }
+      ],
+      "state": {
+        "id": 3,
+        "state": "INPLAY_2ND_HALF",
+        "name": "2nd Half",
+        "short_name": "2H",
+        "developer_name": "INPLAY_2ND_HALF",
+        "is_live": true,
+        "is_pending": false,
+        "is_final_state": false,
+        "is_cancelled": false
+      },
+      "periods": [
+        { "id": 292750, "ticking": true, "minutes": 60 }
+      ],
+      "events": [
+        {
+          "id": 88530001,
+          "fixture_id": 19384700,
+          "period_id": 292750,
+          "participant_id": 214601,
+          "type_id": 14,
+          "minute": 15,
+          "extra_minute": null,
+          "player_id": 504111,
+          "related_player_id": null,
+          "player_name": "Baldur Baldursson",
+          "related_player_name": null
+        },
+        {
+          "id": 88530002,
+          "fixture_id": 19384700,
+          "period_id": 292750,
+          "participant_id": 214602,
+          "type_id": 14,
+          "minute": 40,
+          "extra_minute": null,
+          "player_id": 504222,
+          "related_player_id": null,
+          "player_name": "Einar Einarsson",
+          "related_player_name": null
+        },
+        {
+          "id": 88530003,
+          "fixture_id": 19384700,
+          "period_id": 292750,
+          "participant_id": 214601,
+          "type_id": 14,
+          "minute": 55,
+          "extra_minute": null,
+          "player_id": 504111,
+          "related_player_id": null,
+          "player_name": "Baldur Baldursson",
           "related_player_name": null
         }
       ]
