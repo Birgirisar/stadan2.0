@@ -1,5 +1,36 @@
 import { smGet } from './sportmonks';
-import type { LeagueFull, StandingRow, StandingGroup } from './types';
+import type { LeagueFull, Season, StandingRow, StandingGroup } from './types';
+
+/**
+ * Pick the most recent season from a league's `seasons` list.
+ * Prefers a season flagged `is_current`, then the latest `starting_at`,
+ * then the highest id.
+ */
+export function pickLatestSeason(seasons: Season[] | undefined): Season | undefined {
+  if (!seasons || seasons.length === 0) return undefined;
+  return [...seasons].sort((a, b) => {
+    if (!!a.is_current !== !!b.is_current) return a.is_current ? -1 : 1;
+    const aStart = a.starting_at ? Date.parse(a.starting_at) : 0;
+    const bStart = b.starting_at ? Date.parse(b.starting_at) : 0;
+    if (aStart !== bStart) return bStart - aStart;
+    return b.id - a.id;
+  })[0];
+}
+
+/**
+ * Resolve the season a league detail view should default to.
+ *
+ * Sportmonks clears `currentseason` for a league once its latest season ends
+ * (e.g. Inkasso-Deildin / Lengjudeild karla after its 2026 season finished on
+ * 2026-09-05). When that happens, fall back to the most recent season in the
+ * `seasons` list so standings / scorers / teams still load.
+ */
+export function resolveLeagueSeasonId(league: LeagueFull | undefined): number | null {
+  if (!league) return null;
+  const direct =
+    league.currentseason?.id ?? league.currentSeason?.id ?? league.current_season_id ?? null;
+  return direct ?? pickLatestSeason(league.seasons)?.id ?? null;
+}
 
 // Sportmonks type_id → stat key mapping (used when details.type isn't included in response)
 const STAT_TYPE_IDS: Record<string, number[]> = {

@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme/useTheme';
 import { useQuery } from '@tanstack/react-query';
 import { useLeagueMeta, useLeagueStandingsGrouped } from '../../lib/hooks/useLeagueDetail';
+import { resolveLeagueSeasonId } from '../../lib/api/leagues';
 import { fetchTopScorers } from '../../lib/api/teamDetail';
 import { fetchTeamsBySeason } from '../../lib/api/teams';
 import { useFixturesByDate } from '../../lib/api/fixtures';
@@ -66,7 +67,7 @@ export function LeagueDetailScreen({ leagueId }: Props) {
   const tint = theme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
 
   const { data: league } = useLeagueMeta(leagueId);
-  const currentSeasonId = league?.currentseason?.id ?? league?.currentSeason?.id ?? league?.current_season_id ?? null;
+  const currentSeasonId = resolveLeagueSeasonId(league);
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
   const activeSeasonId = selectedSeasonId ?? currentSeasonId;
 

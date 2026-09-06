@@ -1,5 +1,5 @@
 import { useQueries } from '@tanstack/react-query';
-import { fetchLeague, fetchStandingsForDirectory, extractPoints } from '../api/leagues';
+import { fetchLeague, fetchStandingsForDirectory, extractPoints, pickLatestSeason, resolveLeagueSeasonId } from '../api/leagues';
 import type { LeagueSummary, Season, StandingRow } from '../api/types';
 import { useFixturesByDate } from '../api/fixtures';
 import { getLiveCountByLeague } from '../utils/liveTeams';
@@ -47,10 +47,7 @@ export function useLeagueDirectory() {
     })),
   });
 
-  const seasonIds = leagueQueries.map((q) => {
-    const d = q.data;
-    return d?.currentseason?.id ?? d?.currentSeason?.id ?? d?.current_season_id ?? null;
-  });
+  const seasonIds = leagueQueries.map((q) => resolveLeagueSeasonId(q.data));
 
   const standingQueries = useQueries({
     queries: DIRECTORY_LEAGUE_IDS.map((leagueId, i) => {
@@ -69,7 +66,7 @@ export function useLeagueDirectory() {
   const summaries: LeagueSummary[] = DIRECTORY_LEAGUE_IDS.map((leagueId, i) => {
     const league = leagueQueries[i].data;
     const standings: StandingRow[] = standingQueries[i].data ?? [];
-    const currentSeason = league?.currentseason ?? league?.currentSeason;
+    const currentSeason = league?.currentseason ?? league?.currentSeason ?? pickLatestSeason(league?.seasons);
     const seasonState = deriveSeasonState(currentSeason);
     const topRow = standings[0];
 
@@ -78,7 +75,7 @@ export function useLeagueDirectory() {
       name: LEAGUES[leagueId as keyof typeof LEAGUES]?.displayName ?? league?.name ?? '',
       imagePath: league?.image_path ?? '',
       isWomens: leagueId === 1710 || leagueId === 1711,
-      currentSeasonId: league?.currentseason?.id ?? league?.currentSeason?.id ?? league?.current_season_id ?? null,
+      currentSeasonId: resolveLeagueSeasonId(league),
       currentSeasonYear: seasonYear(currentSeason),
       seasonState,
       startingAt: currentSeason?.starting_at ?? null,
