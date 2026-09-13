@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchRoundsForSeason, fetchFixturesForRound } from '../api/rounds';
+import { fetchRoundsForSeason, fetchFixturesForRound, fetchFixturesByIds } from '../api/rounds';
 import { pickDefaultRound } from '../utils/rounds';
 import type { RoundFull, Fixture } from '../api/types';
 
@@ -61,14 +61,24 @@ export function useLeagueFixtures(seasonId: number | null): UseLeagueFixturesRes
   // Resolved active round — prefer explicit selection, fall back to default
   const selectedRoundId = manualRoundId ?? defaultRoundId;
 
+  const selectedRound = useMemo(
+    () => rounds.find((r) => r.id === selectedRoundId),
+    [rounds, selectedRoundId]
+  );
+
+  // A round with embedded `fixtures` is a synthetic round for a stage that has
+  // no native Round objects (e.g. a promotion play-off) — its id isn't a real
+  // Sportmonks round id, so it must be refetched via fetchFixturesByIds.
+  const isSyntheticRound = !!selectedRound?.fixtures;
+
   // For split-phase leagues the selected round may represent multiple concurrent
   // playoff rounds (championship + relegation groups merged into one chip).
-  // Collect all round IDs we need to fetch so both groups' fixtures appear.
+  // Collect all round/fixture IDs we need to fetch so both groups' fixtures appear.
   const fetchIds = useMemo<number[]>(() => {
     if (!selectedRoundId) return [];
-    const round = rounds.find((r) => r.id === selectedRoundId);
-    return round?.mergedIds ?? [selectedRoundId];
-  }, [selectedRoundId, rounds]);
+    if (isSyntheticRound) return selectedRound!.fixtures!.map((f) => f.id);
+    return selectedRound?.mergedIds ?? [selectedRoundId];
+  }, [selectedRoundId, selectedRound, isSyntheticRound]);
 
   // ── Step 2: Fixtures for the active round(s) ─────────────────────────────
   const {
@@ -77,8 +87,9 @@ export function useLeagueFixtures(seasonId: number | null): UseLeagueFixturesRes
     error: fixturesError,
     refetch: refetchFixtures,
   } = useQuery({
-    queryKey: ['round-fixtures', fetchIds],
+    queryKey: ['round-fixtures', isSyntheticRound ? 'stage' : 'round', fetchIds],
     queryFn: async () => {
+      if (isSyntheticRound) return fetchFixturesByIds(fetchIds);
       const results = await Promise.all(fetchIds.map((id) => fetchFixturesForRound(id)));
       return results
         .flat()

@@ -18,6 +18,7 @@ import { LEAGUES } from '../../constants/leagues';
 import { useMatchDetail } from '../../lib/hooks/useMatchDetail';
 import { useTeamForm } from '../../lib/hooks/useTeamForm';
 import { useStandings } from '../../lib/hooks/useStandings';
+import { useAggregateScores } from '../../lib/hooks/useAggregateScores';
 import { getScore } from '../../lib/utils/score';
 import { getMatchState } from '../../lib/utils/state';
 import { getAvailableSubTabs } from '../../lib/utils/matchSubTabs';
@@ -123,6 +124,9 @@ export default function MatchDetailScreen() {
   const { data: homeForm, isLoading: homeFormLoading } = useTeamForm(home?.id, seasonId);
   const { data: awayForm, isLoading: awayFormLoading } = useTeamForm(away?.id, seasonId);
   const { data: standings } = useStandings(seasonId);
+
+  const aggregateByFixtureId = useAggregateScores(fixture ? [fixture] : []);
+  const aggregateLabel = fixture ? aggregateByFixtureId.get(fixture.id) : undefined;
 
   const motm = fixture ? computeMotm(fixture) : null;
 
@@ -408,6 +412,7 @@ export default function MatchDetailScreen() {
         onFullHeightMeasured={(h) => setHeroFull(h)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        aggregateLabel={aggregateLabel}
       />
     </View>
   );

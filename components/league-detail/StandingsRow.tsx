@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { StandingRow } from '../../lib/api/types';
 import { TeamBadge } from '../fixtures/TeamBadge';
@@ -14,6 +15,10 @@ interface Props {
   isLast?: boolean;
   /** Highlight this row with accent-soft background (used by match detail Tafla) */
   isHighlighted?: boolean;
+  /** Marks this row as the (regular-season) champion — shows a trophy next to the team name */
+  isChampion?: boolean;
+  /** Marks this row as the team promoted via a play-off decider — shows an up-arrow next to the team name */
+  isPlayoffPromoted?: boolean;
   /** Called when the row is tapped — if omitted, row is non-interactive */
   onPress?: () => void;
 }
@@ -30,7 +35,7 @@ function gdStr(n: number): string {
   return `${n}`;
 }
 
-export function StandingsRow({ row, mode, zoneColor, isLive, isLast, isHighlighted, onPress }: Props) {
+export function StandingsRow({ row, mode, zoneColor, isLive, isLast, isHighlighted, isChampion, isPlayoffPromoted, onPress }: Props) {
   const { colors } = useTheme();
   const router = useRouter();
   const team = row.participant;
@@ -89,6 +94,12 @@ export function StandingsRow({ row, mode, zoneColor, isLive, isLast, isHighlight
         >
           {team?.name ?? '—'}
         </Text>
+        {isChampion && (
+          <Ionicons name="trophy" size={11} color={colors.gold} />
+        )}
+        {isPlayoffPromoted && (
+          <Ionicons name="arrow-up-circle" size={12} color={colors.playoff} />
+        )}
         {isLive && (
           <View style={[styles.liveDot, { backgroundColor: colors.live }]} />
         )}

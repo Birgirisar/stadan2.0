@@ -23,6 +23,7 @@ import { useTheme } from '../../lib/theme/useTheme';
 import { getSectionHeading, toDateString } from '../../lib/utils/dates';
 import { getMatchState } from '../../lib/utils/state';
 import { useFollowedTeams } from '../../lib/hooks/useFollowedTeams';
+import { useAggregateScores } from '../../lib/hooks/useAggregateScores';
 import { DatePickerModal } from '../../components/fixtures/DatePickerModal';
 import { DaySelector } from '../../components/fixtures/DaySelector';
 import { FilterChips, FilterType } from '../../components/fixtures/FilterChips';
@@ -80,6 +81,7 @@ function FixtureDayContent({
 }: DayContentProps) {
   const { colors } = useTheme();
   const { data: fixtures = [], isLoading, isFetching, error, refetch } = useFixturesByDate(date);
+  const aggregateByFixtureId = useAggregateScores(fixtures);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const handleRefresh = useCallback(async () => {
@@ -219,7 +221,12 @@ function FixtureDayContent({
           </View>
           <View style={[styles.followedCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             {followedFixtures.map((f, i) => (
-              <MatchRow key={f.id} fixture={f} isLast={i === followedFixtures.length - 1} />
+              <MatchRow
+                key={f.id}
+                fixture={f}
+                isLast={i === followedFixtures.length - 1}
+                aggregateLabel={aggregateByFixtureId.get(f.id)}
+              />
             ))}
           </View>
         </>
@@ -231,6 +238,7 @@ function FixtureDayContent({
           leagueId={g.leagueId}
           fixtures={g.fixtures}
           roundName={g.roundName}
+          aggregateByFixtureId={aggregateByFixtureId}
         />
       ))}
     </ScrollView>

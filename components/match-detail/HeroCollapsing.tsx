@@ -52,6 +52,8 @@ interface Props {
   onFullHeightMeasured: (height: number) => void;
   activeTab: SubTabId;
   onTabChange: (tab: SubTabId) => void;
+  /** Aggregate scoreline for a two-legged tie (e.g. "Samtals 4–4"), shown under the score. */
+  aggregateLabel?: string;
 }
 
 export function HeroCollapsing({
@@ -64,6 +66,7 @@ export function HeroCollapsing({
   onFullHeightMeasured,
   activeTab,
   onTabChange,
+  aggregateLabel,
 }: Props) {
   const { colors, theme } = useTheme();
   const router = useRouter();
@@ -243,11 +246,18 @@ export function HeroCollapsing({
                 {formatKickoffTime(fixture.starting_at)}
               </Text>
             ) : (
-              <View style={styles.scoreDigitRow}>
-                <Text style={[styles.scoreDigit, { color: colors.text }]}>{score.home ?? '-'}</Text>
-                <Text style={[styles.scoreSep, { color: colors.textMuted }]}>–</Text>
-                <Text style={[styles.scoreDigit, { color: colors.text }]}>{score.away ?? '-'}</Text>
-              </View>
+              <>
+                <View style={styles.scoreDigitRow}>
+                  <Text style={[styles.scoreDigit, { color: colors.text }]}>{score.home ?? '-'}</Text>
+                  <Text style={[styles.scoreSep, { color: colors.textMuted }]}>–</Text>
+                  <Text style={[styles.scoreDigit, { color: colors.text }]}>{score.away ?? '-'}</Text>
+                </View>
+                {aggregateLabel && (
+                  <Text style={[styles.aggregateText, { color: colors.textMuted }]} numberOfLines={1}>
+                    {aggregateLabel}
+                  </Text>
+                )}
+              </>
             )}
           </Animated.View>
 
@@ -466,6 +476,12 @@ const styles = StyleSheet.create({
     fontSize: 34,
     letterSpacing: -1,
     lineHeight: 38,
+  },
+  aggregateText: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13,
+    letterSpacing: 0.1,
+    marginTop: 3,
   },
   teamLabel: {
     fontFamily: 'Manrope_700Bold',

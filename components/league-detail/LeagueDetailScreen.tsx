@@ -32,6 +32,7 @@ import { fetchTeamsBySeason } from '../../lib/api/teams';
 import { useFixturesByDate } from '../../lib/api/fixtures';
 import { useLeagueFixtures } from '../../lib/hooks/useLeagueFixtures';
 import { getLiveTeamIds } from '../../lib/utils/liveTeams';
+import { computeAggregateScores } from '../../lib/utils/aggregate';
 import {
   LEAGUES,
   EFRI_HLUTI_ZONE_RULES,
@@ -104,6 +105,53 @@ export function LeagueDetailScreen({ leagueId }: Props) {
     () => rounds.find((r) => r.id === selectedRoundId),
     [rounds, selectedRoundId]
   );
+
+  // Position 1 is crowned once every real (non-synthetic) round is finished —
+  // i.e. the regular season is over, regardless of pending round-less playoff
+  // stages (e.g. Lengjudeild karla's promotion play-off, which decides a
+  // second promoted team but not the league champion). Restricted to
+  // single-table leagues so split-phase leagues (Besta deild) aren't crowned
+  // off the regular-season group before their championship group finishes.
+  const isSingleTableLeague = standingGroups.length === 1 && standingGroups[0]?.type === 'regular';
+  const realRounds = useMemo(() => rounds.filter((r) => !r.fixtures), [rounds]);
+  const regularSeasonComplete = realRounds.length > 0 && realRounds.every((r) => r.finished);
+  const championPosition = isSingleTableLeague && regularSeasonComplete ? 1 : undefined;
+
+  // The team promoted via a round-less play-off (e.g. Lengjudeild karla's
+  // umspil) isn't reliably position 2 in the table — the standings only
+  // reflect regular-season points, not the play-off results. Read the
+  // outcome off the final's own fixture (already embedded on its synthetic
+  // round — see fetchExtraStageRounds) rather than guessing from position.
+  const extraRounds = useMemo(() => rounds.filter((r) => !!r.fixtures), [rounds]);
+  const playoffPromotedTeamId = useMemo(() => {
+    if (extraRounds.length === 0) return undefined;
+    // Extra rounds are appended in ascending stage sort_order, day by day —
+    // the last one is the final matchday of the last (deciding) stage.
+    const finalRound = extraRounds[extraRounds.length - 1];
+    if (!finalRound.finished) return undefined;
+    const fixtures = finalRound.fixtures ?? [];
+    if (fixtures.length !== 1) return undefined; // skip if the decider is an aggregate/multi-leg tie
+    return fixtures[0].participants?.find((p) => p.meta?.winner === true)?.id;
+  }, [extraRounds]);
+
+  // Two-legged play-off ties (e.g. the umspil semi-finals) need an aggregate
+  // scoreline once the second leg is underway/finished — the fixture's own
+  // score only reflects that single leg. See computeAggregateScores.
+  const aggregateByFixtureId = useMemo(() => {
+    // `rounds` (and thus extraRounds' embedded fixtures) come from a query
+    // with a 5-minute staleTime and no live polling, so a leg that kicks off
+    // after that snapshot was taken can sit "Not Started" indefinitely. The
+    // separately-fetched `fixtures` (the currently selected round) DOES poll
+    // live — merge it in so the leg the user is actually looking at is fresh.
+    const byId = new Map<number, (typeof fixtures)[number]>();
+    for (const r of extraRounds) {
+      for (const f of r.fixtures ?? []) byId.set(f.id, f);
+    }
+    for (const f of fixtures) {
+      if (byId.has(f.id)) byId.set(f.id, f);
+    }
+    return computeAggregateScores([...byId.values()]);
+  }, [extraRounds, fixtures]);
 
   const today = useMemo(() => {
     const d = new Date();
@@ -314,6 +362,8 @@ export function LeagueDetailScreen({ leagueId }: Props) {
                       liveTeamIds={liveTeamIds}
                       zoneRules={zoneRules}
                       zoneLabels={zoneLabels}
+                      championPosition={championPosition}
+                      playoffPromotedTeamId={playoffPromotedTeamId}
                     />
                   </View>
                 );
@@ -345,6 +395,7 @@ export function LeagueDetailScreen({ leagueId }: Props) {
               fixturesError={fixturesError}
               onRetryRounds={refetchRounds}
               onRetryFixtures={refetchFixtures}
+              aggregateByFixtureId={aggregateByFixtureId}
             />
           </>
         );

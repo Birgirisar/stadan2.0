@@ -65,19 +65,6 @@ export function pickDefaultRound(rounds: RoundFull[]): number | null {
 }
 
 /**
- * Returns true if the given round is currently in progress based on date range.
- * Used to show a live pulse indicator on the round chip.
- */
-export function isRoundLive(round: RoundFull): boolean {
-  if (round.finished) return false;
-  const start = round.starting_at ? new Date(round.starting_at) : null;
-  const end = round.ending_at ? new Date(round.ending_at) : null;
-  if (!start || !end) return false;
-  const now = new Date();
-  return now >= start && now <= end;
-}
-
-/**
  * Formats a round's date range as an Icelandic label.
  *
  * Examples:

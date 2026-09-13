@@ -10,6 +10,8 @@ interface Props {
   leagueId: number;
   fixtures: Fixture[];
   roundName?: string;
+  /** Aggregate scoreline per fixture id, for two-legged play-off ties. See useAggregateScores. */
+  aggregateByFixtureId?: Map<number, string>;
 }
 
 function sortFixtures(fixtures: Fixture[]): Fixture[] {
@@ -21,7 +23,7 @@ function sortFixtures(fixtures: Fixture[]): Fixture[] {
   });
 }
 
-export function LeagueSection({ leagueId, fixtures, roundName }: Props) {
+export function LeagueSection({ leagueId, fixtures, roundName, aggregateByFixtureId }: Props) {
   const { colors } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const rotation = useRef(new Animated.Value(0)).current;
@@ -86,7 +88,12 @@ export function LeagueSection({ leagueId, fixtures, roundName }: Props) {
       </TouchableOpacity>
 
       {!collapsed && sorted.map((fixture, i) => (
-        <MatchRow key={fixture.id} fixture={fixture} isLast={i === sorted.length - 1} />
+        <MatchRow
+          key={fixture.id}
+          fixture={fixture}
+          isLast={i === sorted.length - 1}
+          aggregateLabel={aggregateByFixtureId?.get(fixture.id)}
+        />
       ))}
     </View>
   );

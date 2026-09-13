@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Animated,
   Dimensions,
   ScrollView,
   StyleSheet,
@@ -8,9 +7,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme/useTheme';
 import type { RoundFull } from '../../lib/api/types';
-import { isRoundLive } from '../../lib/utils/rounds';
 
 // ─── Chip geometry (matches DaySelector proportions) ─────────────────────────
 const CHIP_MIN_W = 52;
@@ -18,28 +17,6 @@ const CHIP_GAP = 8;
 const CHIP_STEP = CHIP_MIN_W + CHIP_GAP;
 const SKELETON_COUNT = 6;
 const PAD_H = 14;
-
-// ─── Pulsing live dot ─────────────────────────────────────────────────────────
-function PulseDot({ color }: { color: string }) {
-  const opacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 0.3, duration: 750, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 1, duration: 750, useNativeDriver: true }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [opacity]);
-
-  return (
-    <Animated.View
-      style={[styles.pulseDot, { backgroundColor: color, opacity }]}
-    />
-  );
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
@@ -83,6 +60,7 @@ export function RoundSelector({ rounds, selectedRoundId, onSelect, isLoading }: 
             />
           ))}
         </ScrollView>
+        <Text style={[styles.label, { color: colors.textMuted }]}>Umferðir</Text>
       </View>
     );
   }
@@ -99,7 +77,11 @@ export function RoundSelector({ rounds, selectedRoundId, onSelect, isLoading }: 
       >
         {rounds.map((round) => {
           const isActive = round.id === selectedRoundId;
-          const live = isRoundLive(round);
+          // Synthetic rounds (e.g. a promotion play-off with no native Round
+          // objects — see fetchRoundsForSeason) always carry embedded fixtures;
+          // real rounds never do. Reuse that as the "extra round" marker so
+          // these chips read visibly differently from the regular-season ones.
+          const isExtra = !!round.fixtures;
 
           return (
             <TouchableOpacity
@@ -109,17 +91,26 @@ export function RoundSelector({ rounds, selectedRoundId, onSelect, isLoading }: 
               style={[
                 styles.chip,
                 isActive
-                  ? { backgroundColor: colors.text }
+                  ? { backgroundColor: isExtra ? colors.playoff : colors.text }
+                  : isExtra
+                  ? { backgroundColor: colors.playoff + '1f', borderWidth: 1, borderColor: colors.playoff + '66' }
                   : { backgroundColor: 'transparent' },
               ]}
             >
-              {/* Live pulse dot — only shown for unselected live rounds */}
-              {live && !isActive && <PulseDot color={colors.live} />}
+              {/* Trophy glyph — marks extra (play-off) rounds */}
+              {isExtra && (
+                <Ionicons
+                  name="trophy"
+                  size={9}
+                  color={isActive ? colors.bg : colors.playoff}
+                  style={styles.extraIcon}
+                />
+              )}
 
               <Text
                 style={[
                   styles.chipNum,
-                  { color: isActive ? colors.bg : colors.textMuted },
+                  { color: isActive ? colors.bg : isExtra ? colors.playoff : colors.textMuted },
                   isActive && styles.chipNumActive,
                 ]}
               >
@@ -129,6 +120,7 @@ export function RoundSelector({ rounds, selectedRoundId, onSelect, isLoading }: 
           );
         })}
       </ScrollView>
+      <Text style={[styles.label, { color: colors.textMuted }]}>Umferðir</Text>
     </View>
   );
 }
@@ -166,12 +158,17 @@ const styles = StyleSheet.create({
   chipNumActive: {
     fontFamily: 'BricolageGrotesque_800ExtraBold',
   },
-  pulseDot: {
+  extraIcon: {
     position: 'absolute',
-    top: 5,
-    right: 6,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    top: 6,
+    left: 7,
+  },
+  label: {
+    fontFamily: 'Manrope_600SemiBold',
+    fontSize: 10.5,
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    paddingHorizontal: PAD_H,
+    paddingBottom: 8,
   },
 });

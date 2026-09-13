@@ -1,15 +1,35 @@
 import type { RoundFull, Fixture } from './types';
 import { smGet } from './sportmonks';
+import { getMatchState } from '../utils/state';
 
 // ─── Internal response shapes ─────────────────────────────────────────────────
+
+/** Raw round object as returned by /seasons/{id}?include=rounds — carries stage_id,
+ * which the app's own RoundFull type doesn't need to expose. */
+interface RawRound extends RoundFull {
+  stage_id?: number;
+}
+
+interface RawStage {
+  id: number;
+  name: string;
+  sort_order?: number;
+}
 
 interface SeasonRoundsResponse {
   id: number;
   name: string;
-  rounds?: RoundFull[];
+  rounds?: RawRound[];
+  stages?: RawStage[];
 }
 
 interface RoundFixturesResponse extends RoundFull {
+  fixtures?: Fixture[];
+}
+
+interface StageFixturesResponse {
+  id: number;
+  name: string;
   fixtures?: Fixture[];
 }
 
@@ -29,13 +49,22 @@ interface RoundFixturesResponse extends RoundFull {
  * detects that situation, merges the concurrent playoff rounds from both
  * groups into single display chips, and renumbers them sequentially after
  * the last regular-season round (e.g. 23, 24, … for a 22-round season).
+ *
+ * Round-less playoff stages (e.g. Lengjudeild karla's promotion play-off):
+ * some leagues append extra stages to a season (semi-finals, final) without
+ * ever creating Round objects for them — /seasons/{id}?include=rounds simply
+ * omits those fixtures. This function detects any stage not represented in
+ * the rounds list and synthesizes display rounds for it directly from that
+ * stage's fixtures (see fetchExtraStageRounds), grouped by matchday and
+ * numbered after the rounds already computed above.
  */
 export async function fetchRoundsForSeason(seasonId: number): Promise<RoundFull[]> {
   const season = await smGet<SeasonRoundsResponse>(`/seasons/${seasonId}`, {
-    include: 'rounds',
+    include: 'rounds;stages',
   });
 
-  const rounds: RoundFull[] = Array.isArray(season?.rounds) ? season.rounds : [];
+  const rawRounds: RawRound[] = Array.isArray(season?.rounds) ? season.rounds : [];
+  const rounds: RoundFull[] = rawRounds;
 
   // Sort chronologically (starting_at), fall back to id for same-date rounds
   const byDate = [...rounds].sort((a, b) => {
@@ -66,11 +95,6 @@ export async function fetchRoundsForSeason(seasonId: number): Promise<RoundFull[
       mainRounds.push(r);
       seenNameInts.add(n);
     }
-  }
-
-  if (repeatRounds.length === 0) {
-    // No split — return the simple chronological sort (same as name order)
-    return byDate;
   }
 
   // ── Merge concurrent playoff rounds ──────────────────────────────────────
@@ -110,7 +134,84 @@ export async function fetchRoundsForSeason(seasonId: number): Promise<RoundFull[
     };
   });
 
-  return [...mainRounds, ...mergedPlayoff];
+  // Chip display order follows round NUMBER, not actual kickoff date — a game
+  // pushed earlier or postponed later can shift a round's whole date window
+  // (see byDate above) without that round logically moving in the sequence.
+  // mainRounds' round-number ints are unique by construction (split-league
+  // detection above), so this is a plain numeric sort; non-numeric names
+  // (rare) sort after, preserving their original relative order.
+  const mainRoundsOrdered = [...mainRounds].sort((a, b) => {
+    const an = parseInt(a.name ?? '', 10);
+    const bn = parseInt(b.name ?? '', 10);
+    if (!isNaN(an) && !isNaN(bn)) return an - bn;
+    if (isNaN(an) !== isNaN(bn)) return isNaN(an) ? 1 : -1;
+    return 0;
+  });
+
+  const baseRounds: RoundFull[] = [...mainRoundsOrdered, ...mergedPlayoff];
+
+  // ── Round-less extra stages ────────────────────────────────────────────────
+  const coveredStageIds = new Set(
+    rawRounds.map((r) => r.stage_id).filter((x): x is number => x != null)
+  );
+  const extraStages = (season.stages ?? [])
+    .filter((s) => !coveredStageIds.has(s.id))
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+  if (extraStages.length === 0) return baseRounds;
+
+  const maxBaseName = baseRounds.reduce((mx, r) => {
+    const n = parseInt(r.name ?? '0', 10);
+    return isNaN(n) ? mx : Math.max(mx, n);
+  }, 0);
+
+  const stageRounds = await fetchExtraStageRounds(extraStages, maxBaseName);
+  return [...baseRounds, ...stageRounds];
+}
+
+/**
+ * Build synthetic display rounds for stages that have no native Round objects
+ * (see fetchRoundsForSeason). Each stage's fixtures are fetched directly and
+ * grouped by matchday (calendar date), since that's the closest equivalent to
+ * a "round" for these stages — e.g. a two-legged semi-final becomes two chips.
+ * Chip ids are synthetic (derived from the stage id), not real Sportmonks
+ * round ids — fetchFixturesByIds must be used to refresh their fixtures.
+ */
+async function fetchExtraStageRounds(stages: RawStage[], startName: number): Promise<RoundFull[]> {
+  const out: RoundFull[] = [];
+  let nextName = startName;
+
+  for (const stage of stages) {
+    const data = await smGet<StageFixturesResponse>(`/stages/${stage.id}`, {
+      include: 'fixtures.participants;fixtures.scores;fixtures.state;fixtures.league;fixtures.events',
+    });
+    const fixtures: Fixture[] = Array.isArray(data?.fixtures) ? data.fixtures : [];
+    if (fixtures.length === 0) continue;
+
+    const byDay = new Map<string, Fixture[]>();
+    for (const f of fixtures) {
+      const day = (f.starting_at ?? '').slice(0, 10);
+      if (!byDay.has(day)) byDay.set(day, []);
+      byDay.get(day)!.push(f);
+    }
+
+    [...byDay.keys()].sort().forEach((day, dayIndex) => {
+      const dayFixtures = [...byDay.get(day)!].sort((a, b) =>
+        (a.starting_at ?? '').localeCompare(b.starting_at ?? '')
+      );
+      nextName += 1;
+      out.push({
+        id: stage.id * 100 + dayIndex,
+        name: String(nextName),
+        finished: dayFixtures.every((f) => getMatchState(f.state).type === 'finished'),
+        starting_at: dayFixtures[0].starting_at,
+        ending_at: dayFixtures[dayFixtures.length - 1].starting_at,
+        fixtures: dayFixtures,
+      });
+    });
+  }
+
+  return out;
 }
 
 /**
@@ -128,4 +229,41 @@ export async function fetchFixturesForRound(roundId: number): Promise<Fixture[]>
   return [...fixtures].sort((a, b) =>
     (a.starting_at ?? '').localeCompare(b.starting_at ?? '')
   );
+}
+
+/**
+ * Fetch specific fixtures by id, sorted by kickoff time ascending.
+ * Uses GET /v3/football/fixtures/multi/{ids} — the refresh path for synthetic
+ * stage-based rounds (see fetchExtraStageRounds), which have no real round id
+ * to call fetchFixturesForRound with.
+ */
+export async function fetchFixturesByIds(ids: number[]): Promise<Fixture[]> {
+  if (ids.length === 0) return [];
+
+  const fixtures = await smGet<Fixture[]>(`/fixtures/multi/${ids.join(',')}`, {
+    include: 'participants;scores;state;league;events',
+  });
+
+  return [...(Array.isArray(fixtures) ? fixtures : [])].sort((a, b) =>
+    (a.starting_at ?? '').localeCompare(b.starting_at ?? '')
+  );
+}
+
+interface FixtureWithStageResponse {
+  id: number;
+  stage?: { id: number; name: string; fixtures?: Fixture[] };
+}
+
+/**
+ * Given a fixture that belongs to a round-less play-off stage (identifiable
+ * by having no `round` — see fetchExtraStageRounds), fetch every fixture in
+ * its stage directly, e.g. to compute an aggregate scoreline for its tie
+ * outside the League Detail screen (which already has this via `rounds`).
+ * Uses GET /v3/football/fixtures/{id}?include=stage.fixtures...
+ */
+export async function fetchStageSiblingFixtures(fixtureId: number): Promise<Fixture[]> {
+  const data = await smGet<FixtureWithStageResponse>(`/fixtures/${fixtureId}`, {
+    include: 'stage.fixtures.participants;stage.fixtures.scores;stage.fixtures.state',
+  });
+  return data?.stage?.fixtures ?? [];
 }
