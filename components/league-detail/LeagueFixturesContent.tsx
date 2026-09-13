@@ -20,6 +20,8 @@ interface Props {
   fixturesError: Error | null;
   onRetryRounds: () => void;
   onRetryFixtures: () => void;
+  /** Aggregate scoreline per fixture id, for two-legged play-off ties. See LeagueDetailScreen. */
+  aggregateByFixtureId?: Map<number, string>;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ export function LeagueFixturesContent({
   fixturesError,
   onRetryRounds,
   onRetryFixtures,
+  aggregateByFixtureId,
 }: Props) {
   const { colors } = useTheme();
 
@@ -165,6 +168,7 @@ export function LeagueFixturesContent({
             key={fixture.id}
             fixture={fixture}
             isLast={i === fixtures.length - 1}
+            aggregateLabel={aggregateByFixtureId?.get(fixture.id)}
           />
         ))}
       </View>

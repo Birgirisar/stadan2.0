@@ -13,6 +13,8 @@ interface Props {
   fixture: Fixture;
   isLast: boolean;
   showDate?: boolean;
+  /** Aggregate scoreline for a two-legged tie (e.g. "Samtals 4–2"), shown under the score. */
+  aggregateLabel?: string;
 }
 
 function PulseDot({ color }: { color: string }) {
@@ -36,7 +38,7 @@ function PulseDot({ color }: { color: string }) {
   );
 }
 
-export function MatchRow({ fixture, isLast, showDate }: Props) {
+export function MatchRow({ fixture, isLast, showDate, aggregateLabel }: Props) {
   const { colors } = useTheme();
   const router = useRouter();
 
@@ -121,34 +123,41 @@ export function MatchRow({ fixture, isLast, showDate }: Props) {
       {/* Center — 54px */}
       <View style={styles.centerCol}>
         {stateResult.showScore ? (
-          <View style={styles.scoreWithCards}>
-            {/* Home digit — card floats above it */}
-            <View style={styles.digitCol}>
-              {hasRedCards && (homeRedCards > 0
-                ? <View style={styles.tinyCardRow}>
-                    {Array.from({ length: homeRedCards }, (_, i) => (
-                      <View key={i} style={[styles.tinyCard, i > 0 && styles.tinyCardOverlap]} />
-                    ))}
-                  </View>
-                : <View style={styles.cardSpacer} />
-              )}
-              <Text style={[styles.score, { color: colors.text }]}>{score.home ?? '-'}</Text>
+          <>
+            <View style={styles.scoreWithCards}>
+              {/* Home digit — card floats above it */}
+              <View style={styles.digitCol}>
+                {hasRedCards && (homeRedCards > 0
+                  ? <View style={styles.tinyCardRow}>
+                      {Array.from({ length: homeRedCards }, (_, i) => (
+                        <View key={i} style={[styles.tinyCard, i > 0 && styles.tinyCardOverlap]} />
+                      ))}
+                    </View>
+                  : <View style={styles.cardSpacer} />
+                )}
+                <Text style={[styles.score, { color: colors.text }]}>{score.home ?? '-'}</Text>
+              </View>
+              {/* Dash */}
+              <Text style={[styles.score, { color: colors.textMuted }]}> – </Text>
+              {/* Away digit — card floats above it */}
+              <View style={styles.digitCol}>
+                {hasRedCards && (awayRedCards > 0
+                  ? <View style={styles.tinyCardRow}>
+                      {Array.from({ length: awayRedCards }, (_, i) => (
+                        <View key={i} style={[styles.tinyCard, i > 0 && styles.tinyCardOverlap]} />
+                      ))}
+                    </View>
+                  : <View style={styles.cardSpacer} />
+                )}
+                <Text style={[styles.score, { color: colors.text }]}>{score.away ?? '-'}</Text>
+              </View>
             </View>
-            {/* Dash */}
-            <Text style={[styles.score, { color: colors.textMuted }]}> – </Text>
-            {/* Away digit — card floats above it */}
-            <View style={styles.digitCol}>
-              {hasRedCards && (awayRedCards > 0
-                ? <View style={styles.tinyCardRow}>
-                    {Array.from({ length: awayRedCards }, (_, i) => (
-                      <View key={i} style={[styles.tinyCard, i > 0 && styles.tinyCardOverlap]} />
-                    ))}
-                  </View>
-                : <View style={styles.cardSpacer} />
-              )}
-              <Text style={[styles.score, { color: colors.text }]}>{score.away ?? '-'}</Text>
-            </View>
-          </View>
+            {aggregateLabel && (
+              <Text style={[styles.aggregateText, { color: colors.textMuted }]} numberOfLines={1}>
+                {aggregateLabel}
+              </Text>
+            )}
+          </>
         ) : stateResult.type === 'pending' ? (
           <Text style={[styles.time, { color: colors.textSecondary }]}>
             {formatKickoffTime(fixture.starting_at)}
@@ -282,6 +291,12 @@ const styles = StyleSheet.create({
   cancelledTime: {
     textDecorationLine: 'line-through',
     opacity: 0.45,
+  },
+  aggregateText: {
+    fontFamily: 'Manrope_600SemiBold',
+    fontSize: 10,
+    letterSpacing: 0.1,
+    marginTop: 2,
   },
   scoreWithCards: {
     flexDirection: 'row',

@@ -50,7 +50,13 @@ export interface RoundFull {
   finished: boolean;
   starting_at: string | null;
   ending_at: string | null;
-  /** Embedded fixtures — present when fetched via /rounds/{id}?include=fixtures.* */
+  /**
+   * Embedded fixtures. Present when fetched via /rounds/{id}?include=fixtures.*,
+   * or synthesized for a round-less stage (e.g. a promotion play-off with no
+   * native Round objects) — see fetchRoundsForSeason. In the latter case `id`
+   * is a synthetic value (not a real Sportmonks round id), so fixtures must be
+   * refetched via fetchFixturesByIds rather than fetchFixturesForRound.
+   */
   fixtures?: Fixture[];
   /**
    * Set when this entry represents multiple concurrent playoff rounds merged

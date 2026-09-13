@@ -20,6 +20,14 @@ interface Props {
   zoneRules?: Record<number, 'promotion' | 'playoff' | 'relegation'>;
   /** Custom legend labels that override the default league-based strings. */
   zoneLabels?: ZoneLabels;
+  /** Table position to mark with a champion crown (e.g. 1 once the regular season is over). */
+  championPosition?: number;
+  /**
+   * Team id promoted via a round-less play-off stage (e.g. Lengjudeild
+   * karla's umspil) — not necessarily position 2, since play-off results
+   * aren't reflected in the regular-season standings. See LeagueDetailScreen.
+   */
+  playoffPromotedTeamId?: number;
 }
 
 function resolveZoneColor(
@@ -45,7 +53,7 @@ function getTeamId(row: StandingRow): number {
   return row.participant_id ?? row.team_id ?? row.participant?.id ?? 0;
 }
 
-export function StandingsTable({ rows, mode, leagueId, liveTeamIds, highlightTeamIds, zoneRules, zoneLabels }: Props) {
+export function StandingsTable({ rows, mode, leagueId, liveTeamIds, highlightTeamIds, zoneRules, zoneLabels, championPosition, playoffPromotedTeamId }: Props) {
   const highlightSet = highlightTeamIds ? new Set(highlightTeamIds) : null;
   const { colors } = useTheme();
 
@@ -97,6 +105,8 @@ export function StandingsTable({ rows, mode, leagueId, liveTeamIds, highlightTea
               isLive={liveTeamIds.has(teamId)}
               isLast={idx === rows.length - 1}
               isHighlighted={highlightSet?.has(teamId) ?? false}
+              isChampion={championPosition != null && row.position === championPosition}
+              isPlayoffPromoted={playoffPromotedTeamId != null && teamId === playoffPromotedTeamId}
             />
           );
         })}
