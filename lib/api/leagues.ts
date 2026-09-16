@@ -50,11 +50,26 @@ export async function fetchLeague(leagueId: number): Promise<LeagueFull> {
   });
 }
 
-export async function fetchStandingsForDirectory(seasonId: number): Promise<StandingRow[]> {
+/**
+ * Fetch the row that should represent a league on the Mót directory card —
+ * i.e. the actual current leader/champion, not just whichever row happens to
+ * have `position === 1` in the API's raw (stage-unaware) return order.
+ *
+ * For split-phase leagues (Besta deild karla/kvenna) the flat standings
+ * endpoint mixes rows from the frozen "Regular Season" stage together with
+ * the live Championship/Relegation Round stages once the split happens, each
+ * with their own position 1 — naively sorting by position can surface the
+ * regular-season leader instead of the team that's actually top of the
+ * Championship Round. extractStandingGroups already orders groups
+ * championship-first (falling back to a single 'regular' group for
+ * non-split leagues), so its first row is always the right one.
+ */
+export async function fetchDirectoryLeaderRow(seasonId: number): Promise<StandingRow | null> {
   const raw = await smGet<unknown[]>(`/standings/seasons/${seasonId}`, {
-    include: 'participant;details.type',
+    include: 'participant;details.type;stage',
   });
-  return extractStandingRows(raw);
+  const groups = extractStandingGroups(raw);
+  return groups[0]?.rows[0] ?? null;
 }
 
 export async function fetchStandingsFull(seasonId: number): Promise<StandingRow[]> {
