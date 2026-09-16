@@ -277,6 +277,25 @@ Deno.serve(async (req) => {
 
   const mock = new URL(req.url).searchParams.get("mock");
 
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+  // Manual off-season kill switch (see poll_config migration) — checked
+  // before anything else so a disabled season never reaches Sportmonks at
+  // all. Mock requests bypass it: triggering ?mock=1/2 is a deliberate test
+  // action and shouldn't be blocked by the switch being off.
+  if (!mock) {
+    const { data: config, error: configError } = await supabase
+      .from("poll_config")
+      .select("enabled")
+      .eq("id", true)
+      .maybeSingle();
+    if (configError) {
+      console.error("[poll-live-scores] failed to read poll_config, defaulting to enabled:", configError.message);
+    } else if (config && !config.enabled) {
+      return respond({ skipped: "poll_disabled" });
+    }
+  }
+
   const loaded = await loadFixtures(mock);
   if (!loaded.ok) {
     return respond({ error: loaded.error }, 502);
@@ -286,8 +305,6 @@ Deno.serve(async (req) => {
   if (fixtures.length === 0) {
     return respond({ live: 0, newEvents: 0, sent: 0, failed: 0, mode: "normal", seededFixtures: 0 });
   }
-
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   // observed_fixtures records, once and permanently, whether we'd already
   // seen a fixture before this poll — decoupled from whether it has any

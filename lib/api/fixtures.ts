@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { toDateString } from '../utils/dates';
 import { getMatchState } from '../utils/state';
+import { isAwaitingPossibleExtraTime } from '../utils/extraTime';
 import type { Fixture } from './types';
 import { smGet } from './sportmonks';
 
@@ -33,6 +34,9 @@ export function useFixturesByDate(date: Date) {
       if (types.some((t) => t === 'live' || t === 'halftime')) return 60_000;
       // Slow poll while any match is still pending — catches kick-off
       if (types.some((t) => t === 'pending')) return 120_000;
+      // A knockout leg just reached "FT" — keep polling briefly in case it
+      // continues into extra time (see isAwaitingPossibleExtraTime).
+      if (data.some((f) => isAwaitingPossibleExtraTime(f))) return 60_000;
       // All finished or cancelled — stop polling
       return false;
     },

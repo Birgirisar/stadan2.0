@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchRoundsForSeason, fetchFixturesForRound, fetchFixturesByIds } from '../api/rounds';
 import { pickDefaultRound } from '../utils/rounds';
+import { isAwaitingPossibleExtraTime } from '../utils/extraTime';
 import type { RoundFull, Fixture } from '../api/types';
 
 export interface UseLeagueFixturesResult {
@@ -97,10 +98,15 @@ export function useLeagueFixtures(seasonId: number | null): UseLeagueFixturesRes
     },
     enabled: fetchIds.length > 0,
     staleTime: 30_000,
-    // Live-poll when any fixture in this round is currently playing
+    // Live-poll when any fixture in this round is currently playing, or a
+    // knockout leg just reached "FT" and might still continue into extra
+    // time (see isAwaitingPossibleExtraTime).
     refetchInterval: (query) => {
       const data = query.state.data as Fixture[] | undefined;
-      return data?.some((f) => f.state?.is_live) ? 30_000 : false;
+      if (!data) return false;
+      if (data.some((f) => f.state?.is_live)) return 30_000;
+      if (data.some((f) => isAwaitingPossibleExtraTime(f))) return 30_000;
+      return false;
     },
   });
 

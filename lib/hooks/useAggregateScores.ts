@@ -3,6 +3,7 @@ import { useQueries } from '@tanstack/react-query';
 import type { Fixture } from '../api/types';
 import { fetchStageSiblingFixtures } from '../api/rounds';
 import { computeAggregateScores } from '../utils/aggregate';
+import { isAwaitingPossibleExtraTime } from '../utils/extraTime';
 
 /**
  * Aggregate scorelines for two-legged play-off ties appearing anywhere a
@@ -26,8 +27,12 @@ export function useAggregateScores(fixtures: Fixture[]): Map<number, string> {
       queryKey: ['stage-siblings', id],
       queryFn: () => fetchStageSiblingFixtures(id),
       staleTime: 30_000,
-      refetchInterval: (query: { state: { data?: Fixture[] } }) =>
-        query.state.data?.some((f) => f.state?.is_live) ? 30_000 : false,
+      refetchInterval: (query: { state: { data?: Fixture[] } }) => {
+        const data = query.state.data;
+        if (data?.some((f) => f.state?.is_live)) return 30_000;
+        if (data?.some((f) => isAwaitingPossibleExtraTime(f))) return 30_000;
+        return false;
+      },
     })),
   });
 

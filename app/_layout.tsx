@@ -30,8 +30,12 @@ function onAppStateChange(status: AppStateStatus) {
   focusManager.setFocused(status === 'active');
 }
 import { BottomDock } from '../components/ui/BottomDock';
+import { UpdateBanner } from '../components/ui/UpdateBanner';
+import { OffSeasonScreen } from '../components/OffSeasonScreen';
+import { OFF_SEASON } from '../constants/offSeason';
 import { useFollowedTeams } from '../lib/hooks/useFollowedTeams';
 import { useNotificationPreference } from '../lib/hooks/useNotificationPreference';
+import { useAppUpdates } from '../lib/hooks/useAppUpdates';
 import { scheduleSyncSubscription } from '../lib/notifications';
 import { ThemeProvider } from '../lib/theme/ThemeProvider';
 import { useTheme } from '../lib/theme/useTheme';
@@ -47,6 +51,20 @@ function ThemedStatusBar() {
 
 function AppShell() {
   const { colors } = useTheme();
+  const { updateReady, applyUpdate } = useAppUpdates();
+
+  // Off-season: skip the tab stack entirely so nothing mounts that would
+  // call the Sportmonks API. useAppUpdates keeps checking regardless, so
+  // flipping OFF_SEASON.enabled back off still reaches everyone via OTA.
+  if (OFF_SEASON.enabled) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <OffSeasonScreen />
+        <UpdateBanner visible={updateReady} onPress={applyUpdate} />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Stack screenOptions={{ headerShown: false }}>
@@ -55,6 +73,7 @@ function AppShell() {
         <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
       </Stack>
       <BottomDock />
+      <UpdateBanner visible={updateReady} onPress={applyUpdate} />
     </View>
   );
 }
