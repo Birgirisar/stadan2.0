@@ -1,5 +1,5 @@
 import { useQueries } from '@tanstack/react-query';
-import { fetchLeague, fetchStandingsForDirectory, extractPoints, pickLatestSeason, resolveLeagueSeasonId } from '../api/leagues';
+import { fetchLeague, fetchDirectoryLeaderRow, extractPoints, pickLatestSeason, resolveLeagueSeasonId } from '../api/leagues';
 import type { LeagueSummary, Season, StandingRow } from '../api/types';
 import { useFixturesByDate } from '../api/fixtures';
 import { getLiveCountByLeague } from '../utils/liveTeams';
@@ -21,7 +21,7 @@ function seasonYear(season: Season | undefined): string {
   return match ? match[0] : '';
 }
 
-function leaderFromRow(row: StandingRow | undefined) {
+function leaderFromRow(row: StandingRow | null | undefined) {
   if (!row?.participant) return null;
   return {
     name: row.participant.name,
@@ -53,8 +53,8 @@ export function useLeagueDirectory() {
     queries: DIRECTORY_LEAGUE_IDS.map((leagueId, i) => {
       const seasonId = seasonIds[i];
       return {
-        queryKey: ['standings-dir', leagueId, seasonId ?? 0],
-        queryFn: () => (seasonId ? fetchStandingsForDirectory(seasonId) : Promise.resolve([])),
+        queryKey: ['standings-dir-leader', leagueId, seasonId ?? 0],
+        queryFn: () => (seasonId ? fetchDirectoryLeaderRow(seasonId) : Promise.resolve(null)),
         enabled: !!seasonId,
         staleTime: 60_000,
       };
@@ -65,10 +65,9 @@ export function useLeagueDirectory() {
 
   const summaries: LeagueSummary[] = DIRECTORY_LEAGUE_IDS.map((leagueId, i) => {
     const league = leagueQueries[i].data;
-    const standings: StandingRow[] = standingQueries[i].data ?? [];
     const currentSeason = league?.currentseason ?? league?.currentSeason ?? pickLatestSeason(league?.seasons);
     const seasonState = deriveSeasonState(currentSeason);
-    const topRow = standings[0];
+    const topRow: StandingRow | null | undefined = standingQueries[i].data;
 
     return {
       leagueId,
