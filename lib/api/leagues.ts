@@ -262,6 +262,86 @@ function groupFlatRows(rows: Array<Record<string, unknown>>): StandingGroup[] {
   return classifyAndOrder(rawGroups);
 }
 
+// ─── Split-phase carry-over ────────────────────────────────────────────────────
+
+const CARRY_OVER_KEYS = [
+  'played', 'won', 'draw', 'lost', 'goals_scored', 'goals_against', 'goal_difference', 'points',
+] as const;
+
+function readCarryOverStat(row: StandingRow, key: (typeof CARRY_OVER_KEYS)[number]): number {
+  return key === 'points' ? extractPoints(row) : extractStat(row, [key]);
+}
+
+// StandingsRow's display (getStatRaw) matches stat columns against each
+// detail entry's `type.code`/`name`/`developer_name` — e.g. code
+// "overall-points" — using key strings ("overall_points", ...) that don't
+// correspond to any STAT_TYPE_IDS entry, so it never falls back to type_id
+// matching for these. A merged entry with only {type_id, value} and no
+// `type` object is therefore invisible to it. Cloning the real `type` off
+// whichever source row still has it (by the reliable type_id) keeps that
+// matching intact.
+function findDetailByTypeId(row: StandingRow, typeId: number) {
+  return row.details?.find((d) => d.type_id === typeId);
+}
+
+/**
+ * Besta deild karla/kvenna carry regular-season points (and every other
+ * stat — played, W/D/L, goals) into the Championship/Relegation Round once
+ * the split happens — standard practice for this format. Sportmonks' own
+ * Championship/Relegation Round rows are NOT cumulative though: `points`,
+ * `played`, etc. all reset to 0 and only count games played within that
+ * round, and `position` is ranked purely on that in-round performance too
+ * (verified against live data — e.g. a team 2nd in the table with 53 points
+ * pre-split can rank behind a team that was 3rd with 44, just because the
+ * latter won its one post-split game so far). Left as-is, both the table and
+ * "who's top of the league" would be wrong until Sportmonks freezes the
+ * groups again at season end.
+ *
+ * This adds each split-stage row's stats to its team's regular-season row,
+ * then re-sorts and re-numbers positions by the resulting total (points,
+ * then goal difference, then goals scored — standard tiebreakers).
+ */
+function mergeSplitPhaseRows(splitRows: StandingRow[], regularRows: StandingRow[]): StandingRow[] {
+  const regularByTeam = new Map<number, StandingRow>();
+  for (const row of regularRows) {
+    const tid = row.participant_id ?? row.team_id ?? row.participant?.id ?? 0;
+    if (tid) regularByTeam.set(tid, row);
+  }
+
+  const merged = splitRows.map((row) => {
+    const tid = row.participant_id ?? row.team_id ?? row.participant?.id ?? 0;
+    const reg = regularByTeam.get(tid);
+    if (!reg) return row; // shouldn't happen — every split-stage team already has a regular-season row
+
+    const details = CARRY_OVER_KEYS.map((key) => {
+      const typeId = STAT_TYPE_IDS[key][0];
+      const template = findDetailByTypeId(row, typeId) ?? findDetailByTypeId(reg, typeId);
+      return {
+        type_id: typeId,
+        value: readCarryOverStat(row, key) + readCarryOverStat(reg, key),
+        type: template?.type,
+      };
+    });
+
+    // `points` also has a convenient direct top-level field (extractPoints
+    // checks it before ever looking at `details`) — keep it consistent with
+    // the merged details entry above.
+    const points = readCarryOverStat(row, 'points') + readCarryOverStat(reg, 'points');
+
+    return { ...row, details, points };
+  });
+
+  return merged
+    .map((row) => ({
+      row,
+      points: extractPoints(row),
+      gd: extractStat(row, ['goal_difference']),
+      gs: extractStat(row, ['goals_scored']),
+    }))
+    .sort((a, b) => b.points - a.points || b.gd - a.gd || b.gs - a.gs)
+    .map(({ row }, i): StandingRow => ({ ...row, position: i + 1 }));
+}
+
 // ─── Stage classification ─────────────────────────────────────────────────────
 
 function classifyAndOrder(
@@ -317,7 +397,7 @@ function classifyAndOrder(
         stageName: g.stageName,
         label: 'Efri hluti',
         type: 'championship' as const,
-        rows: g.rows,
+        rows: mergeSplitPhaseRows(g.rows, regular.rows),
       })),
     ...withMeta
       .filter((g) => g.playoffType === 'relegation')
@@ -326,7 +406,7 @@ function classifyAndOrder(
         stageName: g.stageName,
         label: 'Neðri hluti',
         type: 'relegation' as const,
-        rows: g.rows,
+        rows: mergeSplitPhaseRows(g.rows, regular.rows),
       })),
     { stageId: regular.stageId, stageName: regular.stageName, label: 'Grunnkeppni', type: 'regular' as const, rows: regular.rows },
   ];
