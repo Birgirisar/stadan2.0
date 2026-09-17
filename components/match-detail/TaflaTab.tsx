@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useLeagueStandings } from '../../lib/hooks/useLeagueDetail';
+import { useLeagueStandingsGrouped } from '../../lib/hooks/useLeagueDetail';
 import { StandingsTable } from '../league-detail/StandingsTable';
 import { ViewToggle, type ViewMode } from '../league-detail/ViewToggle';
 import { useTheme } from '../../lib/theme/useTheme';
@@ -59,9 +59,20 @@ export function TaflaTab({
 }: Props) {
   const { colors } = useTheme();
   const [mode, setMode] = useState<ViewMode>('tafla');
-  // useLeagueStandings uses fetchStandingsFull which includes form/details/rule
-  // and correctly handles the flat-array response format our leagues return.
-  const { data: rows, isLoading, error, refetch } = useLeagueStandings(seasonId ?? null);
+  // Grouped (stage-aware) fetch — the flat standings endpoint lists every
+  // team twice for a split-phase league (once in the frozen Regular Season
+  // stage, once in its live Championship/Relegation Round), with no dedup.
+  // Groups come back championship/relegation-first and Grunnkeppni (the
+  // frozen stage) last, so picking the first group either team appears in
+  // always lands on their live group, never the stale one.
+  const { data: groups = [], isLoading, error, refetch } = useLeagueStandingsGrouped(seasonId ?? null);
+  const relevantGroup = groups.find((g) =>
+    g.rows.some((r) => {
+      const tid = r.participant_id ?? r.team_id;
+      return tid === homeTeamId || tid === awayTeamId;
+    })
+  );
+  const rows = relevantGroup?.rows ?? groups[0]?.rows;
 
   // Guard so we only auto-scroll on the very first render that has data.
   const hasScrolled = useRef(false);
