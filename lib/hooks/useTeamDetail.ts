@@ -7,7 +7,7 @@ import {
   type TopScorerEntry,
   type ScheduleStage,
 } from '../api/teamDetail';
-import { fetchStandings } from '../api/standings';
+import { fetchStandingsGrouped } from '../api/leagues';
 import { getScore } from '../utils/score';
 import { computeForm, type FormEntry } from '../utils/form';
 import type { Fixture, StandingRow } from '../api/types';
@@ -196,13 +196,24 @@ export function useTeamDetail(teamId: number): TeamDetailData {
   const form = computeForm(recentFixtures, teamId);
 
   // ── Standings (only if we have a season in a supported league) ────────────
+  // Grouped (stage-aware) fetch — the flat standings endpoint lists every
+  // team twice for a split-phase league (once in the frozen Regular Season
+  // stage, once in its live Championship/Relegation Round), with no dedup,
+  // which showed up as this team appearing twice in the mini table. Picking
+  // the group this team actually belongs to gives one clean, carried-over
+  // table instead.
   const inSupportedLeague = leagueId != null && !!(LEAGUES as Record<number, unknown>)[leagueId];
-  const { data: standings, isLoading: standingsLoading } = useQuery({
-    queryKey: ['standings', seasonId],
-    queryFn: () => fetchStandings(seasonId!),
+  const { data: standingGroups, isLoading: standingsLoading } = useQuery({
+    queryKey: ['standings-grouped', seasonId],
+    queryFn: () => fetchStandingsGrouped(seasonId!),
     staleTime: 5 * 60 * 1000,
     enabled: inSupportedLeague && seasonId != null,
   });
+
+  const relevantGroup = (standingGroups ?? []).find((g) =>
+    g.rows.some((r) => (r.participant_id ?? r.team_id ?? r.participant?.id) === teamId)
+  );
+  const standings = relevantGroup?.rows ?? standingGroups?.[0]?.rows ?? null;
 
   // ── Top scorers (only if we have a supported league season) ───────────────
   const { data: allScorers, isLoading: scorersLoading } = useQuery({
@@ -221,7 +232,7 @@ export function useTeamDetail(teamId: number): TeamDetailData {
     .sort((a, b) => b.total - a.total);
 
   // ── Season stats from standings ────────────────────────────────────────────
-  const seasonStats = extractSeasonStats(standings as StandingRow[] ?? null, teamId);
+  const seasonStats = extractSeasonStats(standings, teamId);
 
   return {
     team: team ?? null,
@@ -231,7 +242,7 @@ export function useTeamDetail(teamId: number): TeamDetailData {
     lastMatch,
     form,
     recentFixtures,
-    standings: (standings as StandingRow[] ?? null),
+    standings,
     topScorers,
     topAssists,
     seasonStats,
