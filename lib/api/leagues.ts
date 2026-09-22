@@ -287,19 +287,25 @@ function findDetailByTypeId(row: StandingRow, typeId: number) {
 /**
  * Besta deild karla/kvenna carry regular-season points (and every other
  * stat — played, W/D/L, goals) into the Championship/Relegation Round once
- * the split happens — standard practice for this format. Sportmonks' own
- * Championship/Relegation Round rows are NOT cumulative though: `points`,
- * `played`, etc. all reset to 0 and only count games played within that
- * round, and `position` is ranked purely on that in-round performance too
- * (verified against live data — e.g. a team 2nd in the table with 53 points
- * pre-split can rank behind a team that was 3rd with 44, just because the
- * latter won its one post-split game so far). Left as-is, both the table and
- * "who's top of the league" would be wrong until Sportmonks freezes the
- * groups again at season end.
+ * the split happens — standard practice for this format.
  *
- * This adds each split-stage row's stats to its team's regular-season row,
- * then re-sorts and re-numbers positions by the resulting total (points,
- * then goal difference, then goals scored — standard tiebreakers).
+ * Sportmonks has been observed publishing that stage's rows BOTH ways over
+ * the course of a single season: early on, each row only counts games
+ * played within the stage itself (played/points reset to 0, climbing back
+ * up from there — e.g. 1 game played, 3 points); later on, the same stage's
+ * rows become cumulative on their own (played/points already include the
+ * regular season). Blindly adding the regular-season stats on top is only
+ * correct in the first case — done to an already-cumulative row it silently
+ * doubles everything (23 real games played reported as 46). So this checks
+ * each row for itself — if its own `played` already covers (or exceeds) the
+ * regular-season `played` count for that team, Sportmonks has already done
+ * the carrying-over and the row is used as-is; otherwise this adds the
+ * regular-season stats on top, the same way it always did.
+ *
+ * Either way, rows are re-sorted and re-numbered by the resulting total
+ * (points, then goal difference, then goals scored — standard tiebreakers)
+ * rather than trusted position field, since that's been seen wrong too (see
+ * git history / conversation for the original in-stage-only case).
  */
 function mergeSplitPhaseRows(splitRows: StandingRow[], regularRows: StandingRow[]): StandingRow[] {
   const regularByTeam = new Map<number, StandingRow>();
@@ -312,6 +318,10 @@ function mergeSplitPhaseRows(splitRows: StandingRow[], regularRows: StandingRow[
     const tid = row.participant_id ?? row.team_id ?? row.participant?.id ?? 0;
     const reg = regularByTeam.get(tid);
     if (!reg) return row; // shouldn't happen — every split-stage team already has a regular-season row
+
+    const splitPlayed = readCarryOverStat(row, 'played');
+    const regularPlayed = readCarryOverStat(reg, 'played');
+    if (splitPlayed >= regularPlayed) return row; // already cumulative — adding would double-count
 
     const details = CARRY_OVER_KEYS.map((key) => {
       const typeId = STAT_TYPE_IDS[key][0];
